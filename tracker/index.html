@@ -184,10 +184,35 @@
 
         <!-- 타임라인 탭 -->
         <div id="timelineView" class="view-container">
-            <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
                 <h3 style="font-weight:900;">⏱️ 시간순 뉴스 타임라인</h3>
                 <p style="color: var(--text-light);">등록된 뉴스를 시간 흐름에 따라 시각화했습니다</p>
             </div>
+            
+            <!-- 타임라인 필터 -->
+            <div style="background:white; padding:1rem; border-radius:10px; border:1px solid var(--border); margin-bottom:1.5rem;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+                    <div style="flex:1; min-width:150px;">
+                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">태그 필터</label>
+                        <select id="timelineTagFilter" style="margin:0;">
+                            <option value="">전체 태그</option>
+                        </select>
+                    </div>
+                    <div style="flex:1; min-width:150px;">
+                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">시작일</label>
+                        <input type="date" id="timelineStartDate" style="margin:0;">
+                    </div>
+                    <div style="flex:1; min-width:150px;">
+                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">종료일</label>
+                        <input type="date" id="timelineEndDate" style="margin:0;">
+                    </div>
+                    <button onclick="resetTimelineFilter()" style="background:var(--text-light); color:white; border:none; padding:0.75rem 1.5rem; border-radius:6px; font-weight:800; cursor:pointer; white-space:nowrap;">🔄 초기화</button>
+                </div>
+                <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-light);">
+                    총 <span id="timelineCount" style="font-weight:800; color:var(--primary);">0</span>개의 뉴스
+                </div>
+            </div>
+            
             <div class="timeline" id="newsTimeline"></div>
         </div>
 
@@ -272,6 +297,7 @@
                 });
                 allNewsData.sort((a, b) => new Date(b.date) - new Date(a.date));
                 updateViews();
+                updateTimelineTagFilter();
             });
         }
 
@@ -363,18 +389,68 @@
             }
         }
 
-        // --- 타임라인 렌더링 ---
+        // --- 타임라인 태그 필터 업데이트 ---
+        function updateTimelineTagFilter() {
+            const tags = new Set();
+            allNewsData.forEach(n => (n.tags || []).forEach(t => tags.add(t)));
+            const select = document.getElementById("timelineTagFilter");
+            if(select) {
+                const current = select.value;
+                select.innerHTML = '<option value="">전체 태그</option>' + 
+                    Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
+            }
+        }
+
+        // --- 타임라인 카운트 업데이트 ---
+        function updateTimelineCount(count) {
+            const countEl = document.getElementById('timelineCount');
+            if(countEl) countEl.textContent = count;
+        }
+
+        // --- 타임라인 필터 초기화 ---
+        window.resetTimelineFilter = () => {
+            document.getElementById('timelineTagFilter').value = '';
+            document.getElementById('timelineStartDate').value = '';
+            document.getElementById('timelineEndDate').value = '';
+            renderTimeline();
+        };
+
+        // --- 타임라인 렌더링 (필터 적용) ---
         function renderTimeline() {
             const container = document.getElementById('newsTimeline');
             if(!container) return;
             
             if(allNewsData.length === 0) {
                 container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">등록된 뉴스가 없습니다</div>';
+                updateTimelineCount(0);
+                return;
+            }
+            
+            // 필터 적용
+            const tagFilter = document.getElementById('timelineTagFilter')?.value || '';
+            const startDate = document.getElementById('timelineStartDate')?.value || '';
+            const endDate = document.getElementById('timelineEndDate')?.value || '';
+            
+            let filtered = allNewsData.filter(n => {
+                // 태그 필터
+                if(tagFilter && !(n.tags || []).includes(tagFilter)) return false;
+                
+                // 날짜 필터
+                if(startDate && n.date < startDate) return false;
+                if(endDate && n.date > endDate) return false;
+                
+                return true;
+            });
+            
+            updateTimelineCount(filtered.length);
+            
+            if(filtered.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">필터 조건에 맞는 뉴스가 없습니다</div>';
                 return;
             }
             
             container.innerHTML = '';
-            allNewsData.forEach((n, i) => {
+            filtered.forEach((n, i) => {
                 const item = document.createElement('div');
                 item.className = `timeline-item ${i % 2 === 0 ? 'left' : 'right'}`;
                 item.innerHTML = `
@@ -680,6 +756,11 @@
                 renderInputTags(); 
             } 
         };
+
+        // --- 타임라인 필터 이벤트 리스너 ---
+        document.getElementById('timelineTagFilter')?.addEventListener('change', renderTimeline);
+        document.getElementById('timelineStartDate')?.addEventListener('change', renderTimeline);
+        document.getElementById('timelineEndDate')?.addEventListener('change', renderTimeline);
 
         // --- 이벤트 리스너 등록 ---
         document.querySelectorAll(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.view));
