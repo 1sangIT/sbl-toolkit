@@ -3,623 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBL Toolkit · IT 뉴스</title>
+    <title>SBL Toolkit · IT 뉴스 리더</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4f46e5;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
+        #main-content { display: none; } /* 인증 전까지 숨김 */
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 sm:p-8">
-    <div class="max-w-7xl mx-auto">
+
+    <div id="main-content" class="max-w-7xl mx-auto">
         <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">📰 IT 뉴스</h1>
-                <p class="text-gray-600 mt-1">키워드별 최신 뉴스를 자동 수집·요약합니다.</p>
+                <h1 class="text-3xl font-bold text-gray-900">📰 IT 뉴스 리더</h1>
+                <p class="text-gray-600 mt-1">실시간 클라우드 동기화 모드 (관리자 전용)</p>
             </div>
             <div class="flex space-x-2 mt-4 sm:mt-0">
-                <button onclick="goHome()" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
-                    🏠 홈
+                <button onclick="location.href='../index.html'" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
+                    <i data-lucide="home" class="w-4 h-4 mr-2"></i> 홈
                 </button>
                 <button id="refresh-all-btn" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i>
-                    전체 새로고침
-                </button>
-                <button id="import-btn" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
-                    <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
-                    가져오기
-                </button>
-                <button id="export-btn" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
-                    <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                    내보내기
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> 전체 갱신
                 </button>
             </div>
         </header>
 
         <div class="bg-white p-5 rounded-lg shadow mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3">새 카테고리</h2>
-            <div class="flex gap-3">
-                <input type="text" id="new-category-name" placeholder="카테고리 이름 (예: AI, 반도체, 글로벌)"
-                    class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <button id="add-category-btn" class="bg-gray-800 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-900 transition font-medium">
-                    생성
-                </button>
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">새 카테고리 추가</h2>
+            <div class="flex space-x-3">
+                <input type="text" id="new-category-name" placeholder="카테고리 이름 입력" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="add-category-btn" class="bg-gray-800 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-900 transition font-medium">생성</button>
             </div>
         </div>
 
         <div id="categories-container" class="space-y-6"></div>
     </div>
 
-    <input type="file" id="import-file-input" accept=".json" style="display:none;">
-
     <div id="alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
             <h3 id="alert-modal-title" class="text-lg font-medium text-gray-900">알림</h3>
             <p id="alert-modal-message" class="text-sm text-gray-600 mt-2"></p>
-            <div class="mt-4 flex justify-end gap-2">
-                <button id="alert-modal-cancel" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 hidden">
-                    취소
-                </button>
-                <button id="alert-modal-confirm" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 hidden">
-                    삭제
-                </button>
-                <button id="alert-modal-close" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                    확인
-                </button>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="alert-modal-confirm" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 hidden">삭제</button>
+                <button id="alert-modal-close" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">확인</button>
             </div>
         </div>
     </div>
 
-    <script>
-        function goHome(){
-            window.location.href = "../";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+
+        // 뉴스트래커 전용 설정값
+        const firebaseConfig = {
+            apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+            authDomain: "itnews-82b60.firebaseapp.com",
+            databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+            projectId: "itnews-82b60",
+            storageBucket: "itnews-82b60.firebasestorage.app",
+            messagingSenderId: "719267588761",
+            appId: "1:719267588761:web:3c4607cb799620f9446608"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const ALLOWED = "eundang@gmail.com";
+
+        let state = { categories: [] };
+        let currentUserId = null;
+
+        // 보안 체크 및 앱 초기화
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email.toLowerCase() === ALLOWED) {
+                currentUserId = user.uid;
+                document.getElementById('main-content').style.display = 'block';
+                loadCloudData(); // 클라우드에서 데이터 로드
+            } else {
+                alert("권한이 없습니다.");
+                location.href = "../index.html";
+            }
+        });
+
+        const categoriesContainer = document.getElementById('categories-container');
+        const refreshIcon = document.getElementById('refresh-icon');
+
+        // 클라우드 데이터 로드 (Realtime Database)
+        function loadCloudData() {
+            const userRef = ref(db, `users/${currentUserId}/newsSettings`);
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    state = data;
+                } else {
+                    // 데이터가 없을 경우 기본값 생성
+                    state = { categories: [{ id: 'cat_default', name: "AI & Tech", keywords: [] }] };
+                    saveCloudData();
+                }
+                renderDashboard();
+            });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Lucide 아이콘 초기화
-            lucide.createIcons();
-
-            // --- 상태 관리 ---
-            let state = {
-                categories: [],
-                selectedCategoryId: null,
-                isLoading: false
-            };
-
-            // --- DOM 요소 ---
-            const categoriesContainer = document.getElementById('categories-container');
-            const newCategoryNameInput = document.getElementById('new-category-name');
-            const addCategoryBtn = document.getElementById('add-category-btn');
-            const refreshAllBtn = document.getElementById('refresh-all-btn');
-            const refreshIcon = document.getElementById('refresh-icon');
-            const importBtn = document.getElementById('import-btn');
-            const exportBtn = document.getElementById('export-btn');
-            const importFileInput = document.getElementById('import-file-input');
-
-            const alertModal = document.getElementById('alert-modal');
-            const alertModalTitle = document.getElementById('alert-modal-title');
-            const alertModalMessage = document.getElementById('alert-modal-message');
-            const alertModalCancel = document.getElementById('alert-modal-cancel');
-            const alertModalConfirm = document.getElementById('alert-modal-confirm');
-            const alertModalClose = document.getElementById('alert-modal-close');
-
-            // --- RSS 프록시 API URL ---
-            const apiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=';
-
-            // --- 로컬 스토리지 키 ---
-            const STORAGE_KEY = 'newsDashboardState';
-
-            // --- 모달 표시 함수 ---
-            function showModal({ title, message, confirmText, onConfirm, onCancel, showCancel = false }) {
-                alertModalTitle.textContent = title;
-                alertModalMessage.textContent = message;
-
-                // 버튼 초기화
-                alertModalConfirm.classList.add('hidden');
-                alertModalCancel.classList.add('hidden');
-                alertModalClose.classList.remove('hidden');
-
-                // confirm 버튼
-                if (confirmText && onConfirm) {
-                    alertModalConfirm.textContent = confirmText;
-                    alertModalConfirm.classList.remove('hidden');
-                    alertModalClose.classList.add('hidden');
-
-                    alertModalConfirm.onclick = () => {
-                        hideModal();
-                        onConfirm();
-                    };
+        // 클라우드에 데이터 저장
+        function saveCloudData() {
+            if (!currentUserId) return;
+            // 로딩 상태 등 임시 데이터는 제외하고 저장
+            const cleanState = JSON.parse(JSON.stringify(state));
+            cleanState.categories.forEach(c => {
+                if(c.keywords) {
+                    c.keywords.forEach(k => { delete k.loading; delete k.error; });
                 }
-
-                // cancel 버튼
-                if (showCancel && onCancel) {
-                    alertModalCancel.classList.remove('hidden');
-                    alertModalCancel.onclick = () => {
-                        hideModal();
-                        onCancel();
-                    };
-                }
-
-                // close 버튼
-                alertModalClose.onclick = hideModal;
-
-                alertModal.classList.remove('hidden');
-                alertModal.classList.add('flex');
-            }
-
-            function hideModal() {
-                alertModal.classList.add('hidden');
-                alertModal.classList.remove('flex');
-            }
-
-            // --- 데이터 저장/로드 ---
-            function saveState() {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            }
-
-            function loadState() {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    try {
-                        state = JSON.parse(saved);
-                    } catch (e) {
-                        console.error('상태 로드 실패:', e);
-                    }
-                }
-
-                // 초기 기본값
-                if (!state.categories || state.categories.length === 0) {
-                    state.categories = [
-                        {
-                            id: crypto.randomUUID(),
-                            name: 'AI',
-                            keywords: ['OpenAI', 'NVIDIA', 'Anthropic'],
-                            feeds: [
-                                'https://feeds.feedburner.com/venturebeat/SZYF',
-                                'https://www.technologyreview.com/feed/',
-                                'https://www.theverge.com/rss/index.xml'
-                            ],
-                            items: [],
-                            lastUpdated: null
-                        },
-                        {
-                            id: crypto.randomUUID(),
-                            name: '반도체',
-                            keywords: ['TSMC', 'Samsung', 'Intel'],
-                            feeds: [
-                                'https://www.anandtech.com/rss/',
-                                'https://www.tomshardware.com/feeds/all'
-                            ],
-                            items: [],
-                            lastUpdated: null
-                        }
-                    ];
-                    state.selectedCategoryId = state.categories[0].id;
-                    saveState();
-                }
-            }
-
-            // --- 유틸 ---
-            function formatDate(dateStr) {
-                if (!dateStr) return '';
-                const d = new Date(dateStr);
-                return d.toLocaleString('ko-KR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            }
-
-            function escapeHtml(str) {
-                return (str || '')
-                    .replaceAll('&', '&amp;')
-                    .replaceAll('<', '&lt;')
-                    .replaceAll('>', '&gt;')
-                    .replaceAll('"', '&quot;')
-                    .replaceAll("'", '&#039;');
-            }
-
-            function stripHtml(html) {
-                const div = document.createElement('div');
-                div.innerHTML = html || '';
-                return (div.textContent || div.innerText || '').trim();
-            }
-
-            // --- 렌더 ---
-            function render() {
-                categoriesContainer.innerHTML = '';
-
-                state.categories.forEach(cat => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-white rounded-lg shadow overflow-hidden';
-
-                    const header = document.createElement('div');
-                    header.className = 'p-5 border-b border-gray-200 flex items-start justify-between gap-4';
-
-                    header.innerHTML = `
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-xl font-bold text-gray-900">${escapeHtml(cat.name)}</h3>
-                                <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">${cat.items?.length || 0}개</span>
-                            </div>
-                            <div class="text-sm text-gray-500 mt-1">
-                                마지막 업데이트: ${cat.lastUpdated ? formatDate(cat.lastUpdated) : '없음'}
-                            </div>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button class="refresh-btn bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition text-sm"
-                                data-id="${cat.id}">
-                                <span class="inline-flex items-center">
-                                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> 새로고침
-                                </span>
-                            </button>
-                            <button class="delete-category-btn bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg hover:bg-red-100 transition text-sm"
-                                data-id="${cat.id}">
-                                삭제
-                            </button>
-                        </div>
-                    `;
-
-                    const body = document.createElement('div');
-                    body.className = 'p-5 space-y-4';
-
-                    // 키워드
-                    const kw = document.createElement('div');
-                    kw.className = 'space-y-2';
-                    kw.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <div class="font-semibold text-gray-800">키워드</div>
-                            <button class="add-keyword-btn text-sm text-indigo-600 hover:underline" data-id="${cat.id}">+ 추가</button>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            ${(cat.keywords || []).map(k => `
-                                <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm flex items-center gap-2">
-                                    ${escapeHtml(k)}
-                                    <button class="remove-keyword-btn text-indigo-500 hover:text-indigo-700" data-id="${cat.id}" data-key="${escapeHtml(k)}">×</button>
-                                </span>
-                            `).join('')}
-                        </div>
-                    `;
-
-                    // RSS
-                    const feeds = document.createElement('div');
-                    feeds.className = 'space-y-2';
-                    feeds.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <div class="font-semibold text-gray-800">RSS 피드</div>
-                            <button class="add-feed-btn text-sm text-indigo-600 hover:underline" data-id="${cat.id}">+ 추가</button>
-                        </div>
-                        <div class="space-y-2">
-                            ${(cat.feeds || []).map(f => `
-                                <div class="flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                    <div class="text-sm text-gray-700 truncate">${escapeHtml(f)}</div>
-                                    <button class="remove-feed-btn text-red-600 hover:text-red-800 text-sm shrink-0" data-id="${cat.id}" data-feed="${escapeHtml(f)}">삭제</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-
-                    // 뉴스 리스트
-                    const list = document.createElement('div');
-                    list.className = 'space-y-3';
-
-                    const items = (cat.items || []);
-                    if (items.length === 0) {
-                        list.innerHTML = `
-                            <div class="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                아직 뉴스가 없습니다. 새로고침을 눌러 가져오세요.
-                            </div>
-                        `;
-                    } else {
-                        list.innerHTML = items.map(item => `
-                            <a href="${escapeHtml(item.link)}" target="_blank" rel="noopener"
-                               class="block bg-white border border-gray-200 rounded-lg p-4 hover:shadow transition">
-                                <div class="font-semibold text-gray-900">${escapeHtml(item.title)}</div>
-                                <div class="text-sm text-gray-600 mt-1 line-clamp-2">${escapeHtml(item.summary || '')}</div>
-                                <div class="text-xs text-gray-500 mt-2">${escapeHtml(item.source || '')} · ${item.pubDate ? formatDate(item.pubDate) : ''}</div>
-                            </a>
-                        `).join('');
-                    }
-
-                    body.appendChild(kw);
-                    body.appendChild(feeds);
-                    body.appendChild(list);
-
-                    card.appendChild(header);
-                    card.appendChild(body);
-                    categoriesContainer.appendChild(card);
-                });
-
-                // 아이콘 다시 렌더
-                lucide.createIcons();
-
-                // 이벤트 바인딩
-                bindEvents();
-            }
-
-            // --- 이벤트 바인딩 ---
-            function bindEvents() {
-                document.querySelectorAll('.refresh-btn').forEach(btn => {
-                    btn.onclick = () => refreshCategory(btn.dataset.id);
-                });
-
-                document.querySelectorAll('.delete-category-btn').forEach(btn => {
-                    btn.onclick = () => deleteCategory(btn.dataset.id);
-                });
-
-                document.querySelectorAll('.add-keyword-btn').forEach(btn => {
-                    btn.onclick = () => addKeyword(btn.dataset.id);
-                });
-
-                document.querySelectorAll('.remove-keyword-btn').forEach(btn => {
-                    btn.onclick = () => removeKeyword(btn.dataset.id, btn.dataset.key);
-                });
-
-                document.querySelectorAll('.add-feed-btn').forEach(btn => {
-                    btn.onclick = () => addFeed(btn.dataset.id);
-                });
-
-                document.querySelectorAll('.remove-feed-btn').forEach(btn => {
-                    btn.onclick = () => removeFeed(btn.dataset.id, btn.dataset.feed);
-                });
-            }
-
-            // --- 카테고리 추가/삭제 ---
-            function addCategory() {
-                const name = newCategoryNameInput.value.trim();
-                if (!name) {
-                    showModal({ title: '입력 오류', message: '카테고리 이름을 입력하세요.' });
-                    return;
-                }
-                state.categories.unshift({
-                    id: crypto.randomUUID(),
-                    name,
-                    keywords: [],
-                    feeds: [],
-                    items: [],
-                    lastUpdated: null
-                });
-                newCategoryNameInput.value = '';
-                saveState();
-                render();
-            }
-
-            function deleteCategory(id) {
-                showModal({
-                    title: '카테고리 삭제',
-                    message: '이 카테고리를 삭제할까요?',
-                    confirmText: '삭제',
-                    showCancel: true,
-                    onConfirm: () => {
-                        state.categories = state.categories.filter(c => c.id !== id);
-                        saveState();
-                        render();
-                    },
-                    onCancel: () => {}
-                });
-            }
-
-            // --- 키워드 ---
-            function addKeyword(categoryId) {
-                const keyword = prompt('추가할 키워드를 입력하세요:');
-                if (!keyword) return;
-                const cat = state.categories.find(c => c.id === categoryId);
-                if (!cat) return;
-                cat.keywords = cat.keywords || [];
-                if (cat.keywords.includes(keyword)) return;
-                cat.keywords.push(keyword);
-                saveState();
-                render();
-            }
-
-            function removeKeyword(categoryId, keyword) {
-                const cat = state.categories.find(c => c.id === categoryId);
-                if (!cat) return;
-                cat.keywords = (cat.keywords || []).filter(k => k !== keyword);
-                saveState();
-                render();
-            }
-
-            // --- RSS 피드 ---
-            function addFeed(categoryId) {
-                const feed = prompt('추가할 RSS URL을 입력하세요:');
-                if (!feed) return;
-                const cat = state.categories.find(c => c.id === categoryId);
-                if (!cat) return;
-                cat.feeds = cat.feeds || [];
-                if (cat.feeds.includes(feed)) return;
-                cat.feeds.push(feed);
-                saveState();
-                render();
-            }
-
-            function removeFeed(categoryId, feed) {
-                const cat = state.categories.find(c => c.id === categoryId);
-                if (!cat) return;
-                cat.feeds = (cat.feeds || []).filter(f => f !== feed);
-                saveState();
-                render();
-            }
-
-            // --- RSS 가져오기 ---
-            async function fetchFeed(url) {
-                try {
-                    const res = await fetch(apiUrl + encodeURIComponent(url));
-                    const data = await res.json();
-                    if (data.status !== 'ok') return [];
-                    return (data.items || []).map(it => ({
-                        title: stripHtml(it.title),
-                        link: it.link,
-                        pubDate: it.pubDate,
-                        source: data.feed?.title || '',
-                        summary: stripHtml(it.description || it.content || '').slice(0, 160)
-                    }));
-                } catch (e) {
-                    console.error('RSS fetch 실패:', e);
-                    return [];
-                }
-            }
-
-            function matchKeywords(items, keywords) {
-                if (!keywords || keywords.length === 0) return items;
-                const lowerKeywords = keywords.map(k => k.toLowerCase());
-                return items.filter(it => {
-                    const text = (it.title + ' ' + (it.summary || '')).toLowerCase();
-                    return lowerKeywords.some(k => text.includes(k));
-                });
-            }
-
-            function dedupeByLink(items) {
-                const seen = new Set();
-                const out = [];
-                for (const it of items) {
-                    if (seen.has(it.link)) continue;
-                    seen.add(it.link);
-                    out.push(it);
-                }
-                return out;
-            }
-
-            async function refreshCategory(categoryId) {
-                const cat = state.categories.find(c => c.id === categoryId);
-                if (!cat) return;
-
-                setLoading(true);
-
-                const feeds = cat.feeds || [];
-                let allItems = [];
-                for (const f of feeds) {
-                    const items = await fetchFeed(f);
-                    allItems = allItems.concat(items);
-                }
-
-                allItems = dedupeByLink(allItems);
-                allItems = matchKeywords(allItems, cat.keywords);
-
-                // 최신순 정렬
-                allItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-
-                cat.items = allItems.slice(0, 30);
-                cat.lastUpdated = new Date().toISOString();
-
-                saveState();
-                render();
-
-                setLoading(false);
-            }
-
-            async function refreshAll() {
-                setLoading(true);
-                refreshIcon.classList.add('animate-spin');
-
-                for (const cat of state.categories) {
-                    await refreshCategory(cat.id);
-                }
-
-                refreshIcon.classList.remove('animate-spin');
-                setLoading(false);
-            }
-
-            function setLoading(isLoading) {
-                state.isLoading = isLoading;
-                refreshAllBtn.disabled = isLoading;
-                addCategoryBtn.disabled = isLoading;
-                importBtn.disabled = isLoading;
-                exportBtn.disabled = isLoading;
-            }
-
-            // --- 내보내기/가져오기 ---
-            function exportData() {
-                const dataStr = JSON.stringify(state, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `news-dashboard-backup-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                showModal({ title: '내보내기 완료', message: '백업 파일이 저장되었습니다.' });
-            }
-
-            function importData(file) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    try {
-                        const imported = JSON.parse(e.target.result);
-                        if (!imported.categories) throw new Error('형식이 올바르지 않습니다.');
-
-                        showModal({
-                            title: '가져오기',
-                            message: '기존 데이터를 어떻게 처리할까요?\n\n확인: 기존 데이터에 추가\n취소: 기존 데이터 삭제 후 가져오기',
-                            confirmText: '확인',
-                            showCancel: true,
-                            onConfirm: () => {
-                                // 추가 모드
-                                const existingIds = new Set(state.categories.map(c => c.id));
-                                for (const c of imported.categories) {
-                                    if (!existingIds.has(c.id)) state.categories.push(c);
-                                }
-                                saveState();
-                                render();
-                                showModal({ title: '가져오기 완료', message: '데이터가 추가되었습니다.' });
-                            },
-                            onCancel: () => {
-                                // 교체 모드
-                                state = imported;
-                                saveState();
-                                render();
-                                showModal({ title: '가져오기 완료', message: '데이터가 교체되었습니다.' });
-                            }
-                        });
-                    } catch (err) {
-                        showModal({ title: '오류', message: '파일을 읽는 중 오류가 발생했습니다: ' + err.message });
-                    }
-                };
-                reader.readAsText(file);
-            }
-
-            // --- 이벤트 ---
-            addCategoryBtn.addEventListener('click', addCategory);
-            refreshAllBtn.addEventListener('click', refreshAll);
-            exportBtn.addEventListener('click', exportData);
-
-            importBtn.addEventListener('click', () => importFileInput.click());
-            importFileInput.addEventListener('change', e => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                importData(file);
-                e.target.value = '';
             });
+            set(ref(db, `users/${currentUserId}/newsSettings`), cleanState);
+        }
 
-            // --- 초기 실행 ---
-            loadState();
-            render();
-        });
+        // UI 렌더링
+        function renderDashboard() {
+            categoriesContainer.innerHTML = '';
+            state.categories.forEach(category => {
+                const section = document.createElement('section');
+                section.className = 'bg-white rounded-lg shadow overflow-hidden mb-6';
+                section.innerHTML = `
+                    <div class="flex justify-between items-center p-4 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-900">${category.name}</h2>
+                        <button onclick="deleteCategory('${category.id}')" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex space-x-2 mb-4">
+                            <input type="text" id="input-${category.id}" placeholder="새 키워드" class="flex-grow border rounded-lg px-3 py-1">
+                            <button onclick="addKeyword('${category.id}')" class="bg-indigo-500 text-white px-4 py-1 rounded-lg">추가</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="grid-${category.id}"></div>
+                    </div>
+                `;
+                categoriesContainer.appendChild(section);
+                renderKeywords(category);
+            });
+            lucide.createIcons();
+        }
+
+        function renderKeywords(category) {
+            const grid = document.getElementById(`grid-${category.id}`);
+            if(!category.keywords) return;
+            category.keywords.forEach(keyword => {
+                const card = document.createElement('div');
+                card.className = 'border rounded-lg p-4 bg-gray-50';
+                card.innerHTML = `
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">${keyword.name}</span>
+                        <button onclick="deleteKeyword('${category.id}', '${keyword.id}')" class="text-gray-400">×</button>
+                    </div>
+                    <div id="news-${keyword.id}" class="text-sm space-y-2">
+                        ${keyword.loading ? '<div class="loader mx-auto"></div>' : (keyword.newsHtml || '뉴스를 불러오는 중...')}
+                    </div>
+                    <button onclick="fetchRSS('${category.id}', '${keyword.id}')" class="mt-3 text-xs text-indigo-600 font-bold">↻ 새로고침</button>
+                `;
+                grid.appendChild(card);
+                if(!keyword.newsHtml && !keyword.loading) fetchRSS(category.id, keyword.id);
+            });
+        }
+
+        // RSS 뉴스 가져오기 로직
+        async function fetchRSS(catId, keyId) {
+            const cat = state.categories.find(c => c.id === catId);
+            const key = cat.keywords.find(k => k.id === keyId);
+            key.loading = true;
+            renderDashboard();
+
+            try {
+                const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(key.name)}&hl=ko&gl=KR&ceid=KR:ko`;
+                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+                const data = await res.json();
+                
+                if (data.status === 'ok') {
+                    key.newsHtml = data.items.slice(0, 3).map(item => `
+                        <a href="${item.link}" target="_blank" class="block hover:underline text-indigo-700 font-medium truncate">• ${item.title}</a>
+                    `).join('');
+                } else {
+                    key.newsHtml = '뉴스를 찾을 수 없습니다.';
+                }
+            } catch (e) {
+                key.newsHtml = '로드 실패';
+            } finally {
+                key.loading = false;
+                renderDashboard();
+            }
+        }
+
+        // 카테고리/키워드 제어 함수들 (Global 등록)
+        window.deleteCategory = (id) => {
+            if(!confirm("삭제할까요?")) return;
+            state.categories = state.categories.filter(c => c.id !== id);
+            saveCloudData();
+        };
+
+        window.addKeyword = (catId) => {
+            const input = document.getElementById(`input-${catId}`);
+            const name = input.value.trim();
+            if(!name) return;
+            const cat = state.categories.find(c => c.id === catId);
+            if(!cat.keywords) cat.keywords = [];
+            cat.keywords.push({ id: 'key_'+Date.now(), name: name });
+            input.value = '';
+            saveCloudData();
+        };
+
+        window.deleteKeyword = (catId, keyId) => {
+            const cat = state.categories.find(c => c.id === catId);
+            cat.keywords = cat.keywords.filter(k => k.id !== keyId);
+            saveCloudData();
+        };
+
+        document.getElementById('add-category-btn').onclick = () => {
+            const name = document.getElementById('new-category-name').value.trim();
+            if(!name) return;
+            state.categories.push({ id: 'cat_'+Date.now(), name: name, keywords: [] });
+            document.getElementById('new-category-name').value = '';
+            saveCloudData();
+        };
+
+        document.getElementById('refresh-all-btn').onclick = () => {
+            state.categories.forEach(c => {
+                if(c.keywords) c.keywords.forEach(k => fetchRSS(c.id, k.id));
+            });
+        };
     </script>
 </body>
 </html>
