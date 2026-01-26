@@ -1,63 +1,142 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBL Toolkit · IT 뉴스 리더 (Cloud)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SBL Toolkit · IT 뉴스 인사이트 트래커</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .animate-spin { animation: spin 1s linear infinite; }
-        #main-content { display: none; }
+        :root {
+            --primary: #3b82f6; --primary-dark: #2563eb; --success: #10b981;
+            --danger: #ef4444; --light-bg: #f9fafb; --border: #d1d5db;
+            --text: #1f2937; --text-light: #6b7280;
+        }
+        body { font-family: -apple-system, system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; background: var(--light-bg); color: var(--text); }
+        
+        /* [상단 프로필 및 공통 UI] */
+        .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .user-profile { display: flex; align-items: center; gap: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+        
+        /* [탭 디자인] */
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
+        .tab { padding: 0.75rem 1.25rem; cursor: pointer; border: none; background: transparent; font-weight: 800; color: var(--text-light); white-space: nowrap; border-bottom: 2px solid transparent; }
+        .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        /* [분석 대시보드 스탯 카드] */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .stat-label { font-size: 0.9rem; color: var(--text-light); font-weight: 700; margin-top: 5px; }
+        .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+        /* [타임라인 디자인 - 좌우 교차형] */
+        .timeline { position: relative; padding: 2rem 0; margin-top: 1rem; }
+        .timeline::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--primary); transform: translateX(-50%); }
+        .timeline-item { position: relative; width: 45%; margin-bottom: 2rem; }
+        .timeline-item.left { margin-left: 0; text-align: right; }
+        .timeline-item.right { margin-left: 55%; text-align: left; }
+        .timeline-dot { position: absolute; left: 50%; top: 20px; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; transform: translateX(-50%); z-index: 2; border: 3px solid white; }
+        .timeline-content { background: white; padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* [공통 카드 및 리스트] */
+        .news-item { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; }
+        .news-tag { background: #eef2ff; color: #4f46e5; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 900; margin-right: 5px; }
+        .view-container { display: none; }
+        .view-container.active { display: block; }
+        
+        @media (max-width: 768px) {
+            .timeline::before { left: 20px; }
+            .timeline-item { width: 100% !important; margin-left: 40px !important; text-align: left !important; }
+            .timeline-dot { left: 20px; }
+            .chart-row { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 sm:p-8">
+<body>
 
-    <div id="main-content" class="max-w-7xl mx-auto">
-        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">뉴스 대시보드 (RSS 자동 가져오기)</h1>
-                <p class="text-gray-600 mt-1">클라우드 동기화 모드 (관리자: eundang@gmail.com)</p>
-            </div>
-            <div class="flex space-x-2 mt-4 sm:mt-0">
-                <button onclick="location.href='../index.html'" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
-                    <i data-lucide="home" class="w-4 h-4 mr-2"></i> 홈
-                </button>
-                <button id="refresh-all-btn" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> 전체 새로고침
-                </button>
-                <button id="import-btn" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
-                    <i data-lucide="upload" class="w-4 h-4 mr-2"></i> 가져오기
-                </button>
-                <button id="export-btn" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
-                    <i data-lucide="download" class="w-4 h-4 mr-2"></i> 내보내기
-                </button>
-            </div>
-        </header>
+    <div class="top-nav">
+        <h1 style="margin:0; font-size:1.5rem; font-weight:900;">인사이트 트래커</h1>
+        <div style="display:flex; gap:8px;">
+            <button class="tab" style="background:#fff; border:1px solid #ddd; border-radius:6px;" onclick="location.href='../index.html'">🏠 홈으로</button>
+            <button class="tab" style="background:var(--primary); color:white; border-radius:6px;" onclick="exportData()">💾 내보내기</button>
+            <button class="tab" style="background:var(--primary); color:white; border-radius:6px;" onclick="triggerImport()">📥 가져오기</button>
+        </div>
+    </div>
 
-        <div class="bg-white p-5 rounded-lg shadow mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3">새 카테고리 만들기</h2>
-            <div class="flex space-x-3">
-                <input type="text" id="new-category-name" onkeydown="if(event.key==='Enter') addCategory()" placeholder="카테고리 이름 입력 후 엔터" class="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <button id="add-category-btn" class="bg-gray-800 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-900 transition font-medium">생성</button>
+    <div id="loginContainer" style="text-align:center; padding:5rem 0; background:white; border-radius:12px; border:1px solid var(--border);">
+        <h2 style="font-weight:900">로그인이 필요합니다</h2>
+        <button id="googleLoginBtn" style="padding:1rem 2rem; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:800; cursor:pointer;">Google 로그인 시작</button>
+    </div>
+
+    <div id="appContainer">
+        <div class="user-profile">
+            <img id="userAvatar" src="" class="user-avatar">
+            <div class="user-info"><div id="userName" class="user-name"></div><div id="userEmail" class="user-email"></div></div>
+            <button id="logoutBtn" style="color:var(--danger); border:none; background:none; font-weight:800; cursor:pointer;">로그아웃</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-view="add">새 뉴스 추가</button>
+            <button class="tab" data-view="analysis">분석</button>
+            <button class="tab" data-view="tags">태그</button>
+            <button class="tab" data-view="list">목록 보기</button>
+            <button class="tab" data-view="clusters">연관 뉴스</button>
+            <button class="tab" data-view="timeline">타임라인</button>
+        </div>
+
+        <div id="addView" class="view-container active">
+            <div style="background:white; padding:1.5rem; border-radius:10px; border:1px solid var(--border);">
+                <label>뉴스 제목</label><input type="text" id="titleInput" onkeydown="if(event.key==='Enter') addNewsHandler()">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:2"><label>URL</label><input type="url" id="urlInput" onkeydown="if(event.key==='Enter') addNewsHandler()"></div>
+                    <div style="flex:1"><label>날짜</label><input type="date" id="dateInput"></div>
+                </div>
+                <label>태그 (Enter로 추가)</label>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; border:1px solid var(--border); padding:5px; border-radius:6px; margin-bottom:1rem;">
+                    <div id="tagsContainer" style="display:flex; gap:5px; flex-wrap:wrap;"></div>
+                    <input type="text" id="tagInput" style="border:none; outline:none; flex:1; margin:0; padding:5px;">
+                </div>
+                <label>메모</label><textarea id="noteInput"></textarea>
+                <button id="addNewsBtn" style="width:100%; padding:1rem; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:800;">저장하기</button>
             </div>
         </div>
 
-        <div id="categories-container" class="space-y-6"></div>
+        <div id="analysisView" class="view-container">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">총 뉴스</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-tags">0</div><div class="stat-label">태그 수</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-recent">0</div><div class="stat-label">최근 7일</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-avg">0</div><div class="stat-label">일평균</div></div>
+            </div>
+            <div class="chart-row">
+                <div class="stat-card"><h3>태그 분포</h3><canvas id="tagPieChart"></canvas></div>
+                <div class="stat-card"><h3>등록 추이</h3><canvas id="trendLineChart"></canvas></div>
+            </div>
+        </div>
+
+        <div id="listView" class="view-container">
+            <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap;">
+                <select id="tagFilter" style="flex:1; min-width:120px;"><option value="">태그: 전체</option></select>
+                <input type="text" id="searchInput" placeholder="검색어 입력..." style="flex:2; min-width:200px; margin:0;">
+                <button id="downloadCsvBtn" style="background:var(--success); color:white; border:none; padding:0.6rem 1rem; border-radius:6px; font-weight:800;">CSV</button>
+            </div>
+            <div id="newsList"></div>
+        </div>
+
+        <div id="timelineView" class="view-container"><div class="timeline" id="newsTimeline"></div></div>
+        <div id="tagsView" class="view-container"><div id="tagsList" style="background:white; padding:1.5rem; border-radius:10px; border:1px solid var(--border);"></div></div>
+        <div id="clustersView" class="view-container"><div id="newsClusters"></div></div>
     </div>
 
-    <input type="file" id="import-file-input" accept=".json" style="display: none;">
+    <input type="file" id="importFileInput" accept=".json" style="display:none;">
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
-        // 파이어베이스 설정
         const firebaseConfig = {
             apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
             authDomain: "itnews-82b60.firebaseapp.com",
@@ -69,205 +148,178 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getDatabase(app);
+        const auth = getAuth(app);
         const ALLOWED = "eundang@gmail.com";
 
-        let state = { categories: [] };
         let currentUserId = null;
-        const RSS_TO_JSON_API = 'https://api.rss2json.com/v1/api.json';
+        let allNewsData = [];
+        const currentTags = [];
+        let tagChart, trendChart;
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email.toLowerCase() === ALLOWED) {
                 currentUserId = user.uid;
-                document.getElementById('main-content').style.display = 'block';
-                loadCloudData();
+                document.getElementById("userAvatar").src = user.photoURL;
+                document.getElementById("userName").textContent = user.displayName;
+                document.getElementById("userEmail").textContent = user.email;
+                document.getElementById("loginContainer").style.display = "none";
+                document.getElementById("appContainer").style.display = "block";
+                loadNewsData();
             } else {
-                alert("권한이 없습니다.");
-                location.href = "../index.html";
+                if(user) { alert("권한이 없습니다."); signOut(auth); }
+                document.getElementById("loginContainer").style.display = "block";
+                document.getElementById("appContainer").style.display = "none";
             }
         });
 
-        function loadCloudData() {
-            onValue(ref(db, `users/${currentUserId}/newsSettings`), (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.categories) {
-                    state = data;
-                    state.categories.forEach(c => {
-                        if (!c.keywords) c.keywords = [];
-                        c.keywords.forEach(k => {
-                            k.loading = false; k.error = null;
-                            if (!k.news) k.news = [];
-                            if (!k.allNews) k.allNews = [];
-                        });
-                    });
-                } else {
-                    state = { categories: [] };
-                }
-                renderDashboard();
-            }, { onlyOnce: true }); // 초기 로드 한 번만 수행 후 fetch 자동 실행
-        }
+        document.getElementById("googleLoginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+        document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-        function saveCloudData() {
-            if (!currentUserId) return;
-            const cleanState = JSON.parse(JSON.stringify(state));
-            cleanState.categories.forEach(c => {
-                c.keywords.forEach(k => { delete k.loading; delete k.error; delete k.news; delete k.allNews; });
+        function loadNewsData() {
+            onValue(ref(db, `users/${currentUserId}/news`), (snapshot) => {
+                allNewsData = [];
+                snapshot.forEach(child => { allNewsData.push({ id: child.key, ...child.val() }); });
+                allNewsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+                updateViews();
             });
-            set(ref(db, `users/${currentUserId}/newsSettings`), cleanState);
         }
 
-        // --- 원본 로직 및 유틸리티 ---
-        const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const formatNewsDate = (timestamp) => {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            if (diffMins < 60) return `${diffMins}분 전`;
-            if (diffHours < 24) return `${diffHours}시간 전`;
-            return `${date.getMonth() + 1}월 ${date.getDate()}일`;
-        };
+        // --- 분석 탭 렌더링 (Chart.js) ---
+        function renderAnalysis() {
+            if (allNewsData.length === 0) return;
+            document.getElementById('stat-total').textContent = allNewsData.length;
+            const tagsSet = new Set();
+            allNewsData.forEach(n => (n.tags || []).forEach(t => tagsSet.add(t)));
+            document.getElementById('stat-tags').textContent = tagsSet.size;
 
-        window.renderDashboard = () => {
-            const container = document.getElementById('categories-container');
+            const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            document.getElementById('stat-recent').textContent = allNewsData.filter(n => new Date(n.date) >= sevenDaysAgo).length;
+            document.getElementById('stat-avg').textContent = (allNewsData.length / 30).toFixed(1);
+
+            // 차트 1: 태그 분포
+            const tagCounts = {};
+            allNewsData.forEach(n => (n.tags || []).forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1));
+            const sortedTags = Object.entries(tagCounts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+            if(tagChart) tagChart.destroy();
+            tagChart = new Chart(document.getElementById('tagPieChart'), {
+                type: 'doughnut',
+                data: { labels: sortedTags.map(t=>t[0]), datasets: [{ data: sortedTags.map(t=>t[1]), backgroundColor: ['#3b82f6','#ef4444','#10b981','#f59e0b','#6366f1'] }] }
+            });
+
+            // 차트 2: 등록 추이
+            const monthCounts = {};
+            allNewsData.forEach(n => { const m = n.date.substring(0, 7); monthCounts[m] = (monthCounts[m] || 0) + 1; });
+            const sortedMonths = Object.keys(monthCounts).sort();
+            if(trendChart) trendChart.destroy();
+            trendChart = new Chart(document.getElementById('trendLineChart'), {
+                type: 'line',
+                data: { labels: sortedMonths, datasets: [{ label: '뉴스 수', data: sortedMonths.map(m=>monthCounts[m]), borderColor: '#3b82f6', fill: true, tension: 0.4 }] }
+            });
+        }
+
+        // --- 타임라인 렌더링 (좌우 교차형) ---
+        function renderTimeline() {
+            const container = document.getElementById('newsTimeline');
             container.innerHTML = '';
-            state.categories.forEach(category => {
-                const section = document.createElement('section');
-                section.className = 'bg-white rounded-lg shadow overflow-hidden';
-                section.innerHTML = `
-                    <div class="flex justify-between items-center p-4 border-b border-gray-200">
-                        <div class="flex items-center cursor-pointer flex-grow" onclick="this.parentElement.nextElementSibling.classList.toggle('hidden')">
-                            <i data-lucide="chevron-down" class="w-5 h-5 mr-2"></i>
-                            <h2 class="text-xl font-bold text-gray-900">${category.name}</h2>
-                        </div>
-                        <button onclick="deleteCategory('${category.id}')" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                    </div>
-                    <div class="category-content p-4">
-                        <div class="flex space-x-3 mb-4">
-                            <input type="text" id="input-${category.id}" onkeydown="if(event.key==='Enter') addKeyword('${category.id}')" placeholder="키워드 입력 후 엔터" class="flex-grow border border-gray-300 rounded-lg px-4 py-2">
-                            <button onclick="addKeyword('${category.id}')" class="bg-indigo-500 text-white p-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5"></i></button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${category.keywords.map(k => `
-                                <div class="border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
-                                    <div>
-                                        <div class="flex justify-between items-center mb-3">
-                                            <h3 class="text-lg font-semibold">${k.name}</h3>
-                                            <button onclick="deleteKeyword('${category.id}', '${k.id}')" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
-                                        </div>
-                                        <div id="news-box-${k.id}" class="min-h-[150px]">
-                                            ${k.loading ? '<div class="flex justify-center py-10"><div class="loader"></div></div>' : renderNewsList(k)}
-                                        </div>
-                                        ${k.allNews && k.allNews.length > 3 ? `<div class="mt-2 text-center"><button onclick="toggleMore('${category.id}', '${k.id}')" class="text-xs text-gray-500 underline">${k.showMore ? '최신만 보기' : '이전 날짜 확인 ('+k.allNews.length+'개)'}</button></div>` : ''}
-                                    </div>
-                                    <div class="mt-4 border-t pt-3 flex justify-between items-center">
-                                        <button onclick="fetchNews('${category.id}', '${k.id}')" class="bg-indigo-500 text-white text-sm px-3 py-1.5 rounded-lg flex items-center"><i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i> 개별 새로고침</button>
-                                        <p class="text-xs text-gray-400">업데이트: ${k.updated || '없음'}</p>
-                                    </div>
-                                </div>`).join('')}
-                        </div>
+            allNewsData.forEach((n, i) => {
+                const item = document.createElement('div');
+                item.className = `timeline-item ${i % 2 === 0 ? 'left' : 'right'}`;
+                item.innerHTML = `
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div style="font-size:0.8rem; color:var(--text-light)">${n.date}</div>
+                        <h4 style="margin:5px 0">${n.title}</h4>
+                        <a href="${n.url}" target="_blank" style="font-size:0.8rem; color:var(--primary)">${n.url.substring(0, 50)}...</a>
+                        <div style="margin-top:8px">${(n.tags || []).map(t => `<span class="news-tag">${t}</span>`).join('')}</div>
                     </div>`;
-                container.appendChild(section);
-                // 뉴스 로드
-                category.keywords.forEach(k => { if(!k.news || k.news.length === 0) fetchNews(category.id, k.id); });
+                container.appendChild(item);
             });
-            lucide.createIcons();
-        };
-
-        function renderNewsList(k) {
-            if (k.error) return `<div class="text-red-500 text-center py-10">${k.error}</div>`;
-            const display = k.showMore ? k.allNews : k.news;
-            if (!display || display.length === 0) return `<div class="text-gray-500 text-center py-10">가져온 뉴스가 없습니다.</div>`;
-            return `<ul class="space-y-3">` + display.map((n, i) => `
-                <li class="${i > 0 ? 'pt-3 border-t border-gray-100' : ''}">
-                    <a href="${n.url}" target="_blank" class="block hover:bg-gray-50 p-1 rounded">
-                        <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${n.title}</h4>
-                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">${n.summary}</p>
-                        <p class="text-xs text-gray-400 mt-1">${formatNewsDate(n.timestamp)}</p>
-                    </a>
-                </li>`).join('') + `</ul>`;
         }
 
-        // --- 데이터 액션 ---
-        window.fetchNews = async (catId, keyId) => {
-            const cat = state.categories.find(c => c.id === catId);
-            const k = cat.keywords.find(k => k.id === keyId);
-            k.loading = true; renderDashboard();
-            try {
-                const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(k.name)}&hl=ko&gl=KR&ceid=KR:ko&num=15`;
-                const res = await fetch(`${RSS_TO_JSON_API}?rss_url=${encodeURIComponent(rssUrl)}`);
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    k.allNews = data.items.map(i => ({
-                        title: i.title, url: i.link, timestamp: new Date(i.pubDate).getTime(),
-                        summary: i.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...'
-                    }));
-                    k.news = k.allNews.slice(0, 3);
-                    k.updated = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                }
-            } catch (e) { k.error = "로드 실패"; }
-            k.loading = false; renderDashboard();
+        // --- 데이터 관리 기능 ---
+        window.addNewsHandler = async () => {
+            const title = document.getElementById("titleInput").value.trim();
+            const url = document.getElementById("urlInput").value.trim();
+            if (!title || !url) return alert("필수 항목을 입력하세요.");
+            const data = { title, url, date: document.getElementById("dateInput").value, tags: [...currentTags], note: document.getElementById("noteInput").value, timestamp: Date.now() };
+            await push(ref(db, `users/${currentUserId}/news`), data);
+            document.getElementById("titleInput").value = ""; document.getElementById("urlInput").value = ""; currentTags.length = 0; renderInputTags();
+            switchTab("list");
         };
 
-        window.addCategory = () => {
-            const name = document.getElementById('new-category-name').value.trim();
-            if (!name) return;
-            state.categories.push({ id: generateId(), name, keywords: [] });
-            document.getElementById('new-category-name').value = ''; saveCloudData(); renderDashboard();
+        window.exportData = () => {
+            const blob = new Blob([JSON.stringify({ news: allNewsData }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `tracker-backup.json`; a.click();
         };
 
-        window.addKeyword = (catId) => {
-            const input = document.getElementById(`input-${catId}`);
-            if (!input.value.trim()) return;
-            state.categories.find(c => c.id === catId).keywords.push({ id: generateId(), name: input.value.trim(), news: [], allNews: [], showMore: false });
-            saveCloudData(); renderDashboard();
-        };
-
-        window.deleteKeyword = (catId, keyId) => {
-            const cat = state.categories.find(c => c.id === catId);
-            cat.keywords = cat.keywords.filter(k => k.id !== keyId);
-            saveCloudData(); renderDashboard();
-        };
-
-        window.deleteCategory = (id) => { if(confirm("카테고리를 삭제할까요?")) { state.categories = state.categories.filter(c => c.id !== id); saveCloudData(); renderDashboard(); } };
-        window.toggleMore = (catId, keyId) => { const k = state.categories.find(c => c.id === catId).keywords.find(k => k.id === keyId); k.showMore = !k.showMore; renderDashboard(); };
-
-        // --- 백업 및 복원 ---
-        document.getElementById('export-btn').onclick = () => {
-            const data = { exportDate: new Date().toISOString(), data: state };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `news-backup.json`;
-            a.click();
-        };
-
-        document.getElementById('import-btn').onclick = () => document.getElementById('import-file-input').click();
-        document.getElementById('import-file-input').onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        window.triggerImport = () => document.getElementById("importFileInput").click();
+        document.getElementById("importFileInput").onchange = (e) => {
+            const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const imported = JSON.parse(ev.target.result);
-                    // { data: { categories: [] } } 형태와 { categories: [] } 형태 모두 지원
-                    state = imported.data || imported;
-                    saveCloudData(); renderDashboard();
-                    alert("데이터 복원 성공!");
-                } catch (err) { alert("잘못된 파일 형식입니다."); }
+            reader.onload = async (ev) => {
+                const data = JSON.parse(ev.target.result).news || [];
+                if(confirm(`${data.length}개의 데이터를 클라우드에 복구하시겠습니까?`)) {
+                    for(const item of data) { delete item.id; await push(ref(db, `users/${currentUserId}/news`), item); }
+                    alert("복구 성공!");
+                }
             };
             reader.readAsText(file);
         };
 
-        document.getElementById('refresh-all-btn').onclick = () => {
-            document.getElementById('refresh-icon').classList.add('animate-spin');
-            state.categories.forEach(c => c.keywords.forEach(k => fetchNews(c.id, k.id)));
-            setTimeout(() => document.getElementById('refresh-icon').classList.remove('animate-spin'), 2000);
-        };
+        // --- UI 유틸리티 ---
+        function renderInputTags() {
+            const container = document.getElementById("tagsContainer"); container.innerHTML = "";
+            currentTags.forEach((tag, i) => {
+                const span = document.createElement("span"); span.className = "news-tag";
+                span.innerHTML = `${tag} <span onclick="currentTags.splice(${i},1);renderInputTags()" style="cursor:pointer">×</span>`;
+                container.appendChild(span);
+            });
+        }
+        document.getElementById("tagInput").onkeydown = (e) => { if(e.key === "Enter" && e.target.value.trim()) { currentTags.push(e.target.value.trim().toLowerCase()); e.target.value = ""; renderInputTags(); } };
 
-        document.getElementById('add-category-btn').onclick = window.addCategory;
+        function updateViews() {
+            const active = document.querySelector(".tab.active").dataset.view;
+            if(active === 'list') renderList();
+            if(active === 'analysis') renderAnalysis();
+            if(active === 'timeline') renderTimeline();
+            if(active === 'tags') renderTagsView();
+            if(active === 'clusters') renderClusters();
+        }
+
+        function renderList() {
+            const list = document.getElementById("newsList");
+            const filter = document.getElementById("tagFilter").value;
+            const search = document.getElementById("searchInput").value.toLowerCase();
+            const filtered = allNewsData.filter(n => (!filter || (n.tags||[]).includes(filter)) && (!search || n.title.toLowerCase().includes(search)));
+            
+            list.innerHTML = filtered.map(n => `
+                <div class="news-item">
+                    <div style="font-size:0.8rem; color:var(--text-light)">${n.date}</div>
+                    <div style="font-weight:900; font-size:1.1rem; margin:5px 0">${n.title}</div>
+                    <a href="${n.url}" target="_blank" style="color:var(--primary); font-size:0.9rem">${n.url}</a>
+                    <div style="margin-top:10px">${(n.tags || []).map(t => `<span class="news-tag">${t}</span>`).join('')}</div>
+                    <button onclick="deleteNews('${n.id}')" style="margin-top:10px; color:red; border:none; background:none; font-weight:800; cursor:pointer;">삭제</button>
+                </div>`).join('');
+            
+            // 필터 목록 업데이트
+            const tags = new Set(); allNewsData.forEach(n => (n.tags||[]).forEach(t => tags.add(t)));
+            const select = document.getElementById("tagFilter");
+            const current = select.value;
+            select.innerHTML = '<option value="">태그: 전체</option>' + Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
+        }
+
+        window.deleteNews = (id) => { if(confirm("삭제할까요?")) remove(ref(db, `users/${currentUserId}/news/${id}`)); };
+        window.switchTab = (view) => {
+            document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+            document.querySelectorAll(".view-container").forEach(c => c.classList.toggle("active", c.id === `${view}View`));
+            updateViews();
+        };
+        document.querySelectorAll(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.view));
+        document.getElementById("addNewsBtn").onclick = window.addNewsHandler;
+        document.getElementById("searchInput").oninput = renderList;
+        document.getElementById("tagFilter").onchange = renderList;
+        document.getElementById("dateInput").valueAsDate = new Date();
     </script>
 </body>
 </html>
