@@ -3,215 +3,134 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Second Brain Lab · 업무용 툴킷</title>
-
+  <title>Second Brain Lab · SBL Toolkit</title>
   <style>
     :root {
       --bg: #0b1020; --bg2: #0f1730; --card: #0f1a33;
       --text: #e9eefc; --muted: #b9c3e6; --line: rgba(255,255,255,.10);
-      --accent: #6ea8ff; --shadow: 0 18px 60px rgba(0,0,0,.35); --r: 18px;
-    }
-    [data-theme="light"] {
-      --bg: #f6f7fb; --bg2: #ffffff; --card: #ffffff;
-      --text: #101828; --muted: #667085; --line: rgba(16,24,40,.10);
-      --accent: #2563eb; --shadow: 0 18px 60px rgba(16,24,40,.10);
+      --accent: #6ea8ff; --r: 18px;
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
-      color: var(--text);
-      background: 
-        radial-gradient(1200px 700px at 20% 10%, rgba(110,168,255,.22), transparent 60%),
-        radial-gradient(900px 600px at 85% 25%, rgba(167,139,250,.18), transparent 60%),
-        linear-gradient(180deg, var(--bg), var(--bg2));
+      margin: 0; font-family: -apple-system, system-ui, sans-serif;
+      color: var(--text); background: linear-gradient(180deg, var(--bg), var(--bg2));
       min-height: 100vh;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 44px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px; }
     header {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r);
       background: rgba(255,255,255,.04); backdrop-filter: blur(10px);
     }
-    [data-theme="light"] header { background: rgba(255,255,255,.85); }
-    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .logo {
-      width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
-      background: linear-gradient(135deg, rgba(110,168,255,.90), rgba(167,139,250,.70));
-      color: #fff; font-weight: 900; letter-spacing: -.02em; box-shadow: 0 10px 25px rgba(0,0,0,.20);
-    }
-    .brand-title .t1 { font-size: 14px; font-weight: 900; }
-    .brand-title .t2 { font-size: 12px; color: var(--muted); }
-
-    .controls { display: flex; align-items: center; gap: 10px; }
     .btn {
       border: 1px solid var(--line); background: rgba(255,255,255,.06); color: var(--text);
       padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 900; font-size: 13px;
     }
     .btn.primary { background: var(--accent); color: #fff; border: none; }
-
-    .hero { margin: 32px 0 24px; padding: 0 10px; }
-    .hero h1 { margin: 0 0 12px; font-size: 32px; letter-spacing: -.02em; }
-    .hero p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 15px; }
-
+    .hero { margin: 40px 0 24px; text-align: center; }
+    .hero h1 { font-size: 36px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); }
     .authbar {
-      margin-top: 20px; display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--r);
-      background: rgba(255,255,255,.03);
+      margin: 20px 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--r);
+      background: rgba(255,255,255,.02);
     }
-    .user { display: flex; align-items: center; gap: 12px; }
-    .avatar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); }
-    .chip { padding: 6px 12px; border-radius: 999px; font-size: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); }
-
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
     .card {
       border: 1px solid var(--line); border-radius: var(--r);
-      background: rgba(255,255,255,.05); padding: 24px; position: relative;
-      transition: all .2s ease;
+      background: rgba(255,255,255,.05); padding: 28px; opacity: 0.4; filter: grayscale(1);
+      transition: 0.3s ease; text-align: center;
     }
-    .card.locked { opacity: 0.6; filter: grayscale(0.5); }
-    .card h2 { margin: 16px 0 8px; font-size: 18px; }
-    .card p { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
-
+    .card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--accent); }
     .action {
-      display: flex; justify-content: center; align-items: center;
-      width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
-      text-decoration: none; font-weight: 900; font-size: 14px; color: var(--text);
-      background: rgba(255,255,255,.06); transition: all .1s;
+      display: block; margin-top: 20px; padding: 12px; border-radius: 12px;
+      text-decoration: none; font-weight: 900; color: #666; background: #222;
+      pointer-events: none; transition: 0.2s;
     }
-    .action.primary { background: var(--accent); color: #fff; border: none; }
-    .action.disabled { pointer-events: none; background: #333; color: #666; border: none; }
-
-    footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--muted); opacity: 0.6; }
-
+    .action.active { background: var(--accent); color: #fff; pointer-events: auto; }
+    footer { margin-top: 60px; text-align: center; font-size: 12px; opacity: 0.4; }
     @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
-
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">
-        <div class="logo">SBL</div>
-        <div class="brand-title">
-          <div class="t1">Second Brain Lab</div>
-          <div class="t2">업무용 전용 툴킷</div>
-        </div>
-      </div>
-      <div class="controls">
-        <button class="btn" id="themeBtn">🌓 테마</button>
+      <div style="font-weight:900; letter-spacing:-0.5px;">SBL Toolkit</div>
+      <div>
         <button class="btn primary" id="loginBtn">Google 로그인</button>
         <button class="btn" id="logoutBtn" style="display:none;">로그아웃</button>
       </div>
     </header>
 
     <section class="hero">
-      <h1 id="heroTitle">관리자 전용 대시보드</h1>
-      <p id="heroMsg">접근 권한이 필요합니다. <strong>eundang@gmail.com</strong> 계정으로 로그인해주세요.</p>
+      <h1 id="hTitle">업무용 툴킷</h1>
+      <p id="hMsg">지정된 관리자 계정으로 로그인해 주세요.</p>
     </section>
 
     <div class="authbar">
-      <div class="user">
-        <img class="avatar" id="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='100%25' height='100%25' fill='%23333'/%3E%3C/svg%3E">
-        <div class="user-info">
-          <div class="u1" id="userName" style="font-weight:900">GUEST</div>
-          <div id="userEmail" style="font-size:12px; color:var(--muted)">로그인이 필요함</div>
-        </div>
-      </div>
-      <span class="chip" id="statusChip">접근 제한됨</span>
+      <div id="userInfo" style="font-weight:700;">접속 대기 중...</div>
+      <div id="statusChip" style="font-size:12px; color:var(--muted)">GUEST</div>
     </div>
 
     <section class="grid">
-      <div class="card locked" id="card-bookmark">
-        <h2>📚 북마크</h2>
-        <p>링크 카테고리 관리 및 대시보드</p>
-        <a class="action disabled toolLink" href="./bookmark/">실행하기</a>
-      </div>
-      <div class="card locked" id="card-news">
-        <h2>📰 IT 뉴스</h2>
-        <p>키워드별 RSS 뉴스 수집 리더</p>
-        <a class="action disabled toolLink" href="./it-news/">실행하기</a>
-      </div>
-      <div class="card locked" id="card-tracker">
-        <h2>🧾 Tracker</h2>
-        <p>인사이트 트래커 및 타임라인</p>
-        <a class="action disabled toolLink" href="./tracker/">실행하기</a>
-      </div>
+      <div class="card" id="c1"><h2>📚 북마크</h2><a class="action" id="a1" href="./bookmark/">실행하기</a></div>
+      <div class="card" id="c2"><h2>📰 IT 뉴스</h2><a class="action" id="a2" href="./it-news/">실행하기</a></div>
+      <div class="card" id="c3"><h2>🧾 Tracker</h2><a class="action" id="a3" href="./tracker/">실행하기</a></div>
     </section>
 
-    <footer>&copy; Second Brain Lab. Internal Use Only.</footer>
+    <footer>&copy; Second Brain Lab. 업무 전용 공간입니다.</footer>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-    // ⚠️ [중요] 나중에 파이어베이스 설정값으로 반드시 교체하세요!
+    // 대표님께서 요청하신 '뉴스트래커' 전용 설정값
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+      authDomain: "itnews-82b60.firebaseapp.com",
+      databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+      projectId: "itnews-82b60",
+      storageBucket: "itnews-82b60.firebasestorage.app",
+      messagingSenderId: "719267588761",
+      appId: "1:719267588761:web:3c4607cb799620f9446608"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const ALLOWED_EMAIL = "eundang@gmail.com";
+    const ALLOWED = "eundang@gmail.com";
 
-    // 테마 토글
-    document.getElementById("themeBtn").onclick = () => {
-      const root = document.documentElement;
-      const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
-      root.setAttribute("data-theme", next);
-    };
-
-    // 로그인/로그아웃 로직
-    document.getElementById("loginBtn").onclick = async () => {
-      try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
-      catch (e) { console.error(e); }
-    };
+    document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
     document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-    // 권한에 따른 UI 활성화 함수
-    function updateUI(user) {
-      const isAllowed = user && user.email.toLowerCase() === ALLOWED_EMAIL;
-      const toolLinks = document.querySelectorAll(".toolLink");
-      const cards = document.querySelectorAll(".card");
+    onAuthStateChanged(auth, (user) => {
+      const isAllowed = user && user.email.toLowerCase() === ALLOWED;
+      const ids = ["c1","c2","c3"];
+      const btnIds = ["a1","a2","a3"];
 
       if (isAllowed) {
-        document.getElementById("heroTitle").textContent = "반갑습니다, 대표님";
-        document.getElementById("heroMsg").textContent = "모든 업무용 도구가 활성화되었습니다.";
-        document.getElementById("userName").textContent = user.displayName;
-        document.getElementById("userEmail").textContent = user.email;
-        document.getElementById("avatar").src = user.photoURL;
-        document.getElementById("statusChip").textContent = "관리자 권한";
+        document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
+        document.getElementById("hMsg").innerText = "SBL Toolkit의 모든 권한이 활성화되었습니다.";
+        document.getElementById("userInfo").innerText = user.displayName + " (" + user.email + ")";
+        document.getElementById("statusChip").innerText = "관리자 인증됨";
+        document.getElementById("statusChip").style.color = "#6ea8ff";
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("logoutBtn").style.display = "block";
-
-        cards.forEach(c => c.classList.remove("locked"));
-        toolLinks.forEach(l => {
-          l.classList.remove("disabled");
-          l.classList.add("primary");
-        });
+        ids.forEach(id => document.getElementById(id).classList.add("unlocked"));
+        btnIds.forEach(id => document.getElementById(id).classList.add("active"));
       } else {
-        if (user) {
-          alert("권한이 없는 계정입니다.");
-          signOut(auth);
+        if (user) { 
+          alert("권한이 없는 계정입니다. eundang@gmail.com으로 다시 로그인해 주세요.");
+          signOut(auth); 
         }
-        // 초기화 상태
         document.getElementById("loginBtn").style.display = "block";
         document.getElementById("logoutBtn").style.display = "none";
-        cards.forEach(c => c.classList.add("locked"));
-        toolLinks.forEach(l => {
-          l.classList.add("disabled");
-          l.classList.remove("primary");
-        });
+        document.getElementById("userInfo").innerText = "접속 대기 중...";
+        document.getElementById("statusChip").innerText = "GUEST";
+        ids.forEach(id => document.getElementById(id).classList.remove("unlocked"));
+        btnIds.forEach(id => document.getElementById(id).classList.remove("active"));
       }
-    }
-
-    onAuthStateChanged(auth, updateUI);
+    });
   </script>
 </body>
 </html>
