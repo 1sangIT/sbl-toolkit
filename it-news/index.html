@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBL Toolkit · IT 뉴스 리더 (Auto-sync)</title>
+    <title>SBL Toolkit · IT 뉴스 리더 (Cloud Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -21,20 +21,25 @@
         <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">📰 IT 뉴스 리더</h1>
-                <p class="text-gray-600 mt-1">클라우드 동기화 모드 (관리자: eundang@gmail.com)</p>
+                <p class="text-gray-600 mt-1">실시간 클라우드 동기화 (관리자: eundang@gmail.com)</p>
             </div>
             <div class="flex space-x-2 mt-4 sm:mt-0">
                 <button onclick="location.href='../index.html'" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
                     <i data-lucide="home" class="w-4 h-4 mr-2"></i> 홈
                 </button>
                 <button id="refresh-all-btn" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> 전체 새로고침
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2" id="refresh-icon"></i> 전체 갱신
                 </button>
-                <button id="export-btn" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
+                <button onclick="exportNewsToJSON()" class="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition">
                     <i data-lucide="download" class="w-4 h-4 mr-2"></i> 내보내기
+                </button>
+                <button onclick="triggerNewsImport()" class="flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-indigo-700 transition">
+                    <i data-lucide="upload" class="w-4 h-4 mr-2"></i> 가져오기
                 </button>
             </div>
         </header>
+
+        <input type="file" id="importNewsFile" accept=".json" style="display: none;" onchange="handleNewsImport(event)">
 
         <div class="bg-white p-5 rounded-lg shadow mb-6">
             <h2 class="text-lg font-semibold text-gray-800 mb-3">새 카테고리 만들기</h2>
@@ -45,16 +50,6 @@
         </div>
 
         <div id="categories-container" class="space-y-6"></div>
-    </div>
-
-    <div id="alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-            <h3 id="alert-modal-title" class="text-lg font-medium text-gray-900">알림</h3>
-            <p id="alert-modal-message" class="text-sm text-gray-600 mt-2"></p>
-            <div class="mt-4 flex justify-end space-x-2">
-                <button id="alert-modal-close" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">확인</button>
-            </div>
-        </div>
     </div>
 
     <script type="module">
@@ -97,6 +92,9 @@
                 if (data) {
                     state = data;
                     state.categories.forEach(c => { if (!c.keywords) c.keywords = []; });
+                } else {
+                    state = { categories: [{ id: 'cat_default', name: "AI & Tech", keywords: [] }] };
+                    saveCloudData();
                 }
                 renderDashboard();
             });
@@ -106,83 +104,100 @@
             if (!currentUserId) return;
             const cleanState = JSON.parse(JSON.stringify(state));
             cleanState.categories.forEach(c => {
-                if(c.keywords) c.keywords.forEach(k => { delete k.loading; delete k.error; });
+                if(c.keywords) c.keywords.forEach(k => { delete k.loading; delete k.error; delete k.newsHtml; });
             });
             set(ref(db, `users/${currentUserId}/newsSettings`), cleanState);
         }
 
+        // --- 내보내기/가져오기 기능 ---
+        window.exportNewsToJSON = () => {
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sbl-news-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        window.triggerNewsImport = () => document.getElementById('importNewsFile').click();
+
+        window.handleNewsImport = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm("기존 뉴스 설정을 덮어쓰시겠습니까?")) {
+                        state = imported;
+                        saveCloudData();
+                        alert("뉴스 설정 복원 성공!");
+                    }
+                } catch (err) { alert("잘못된 파일 형식입니다."); }
+            };
+            reader.readAsText(file);
+        };
+
         const categoriesContainer = document.getElementById('categories-container');
         const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        
+
         window.renderDashboard = () => {
             categoriesContainer.innerHTML = '';
             state.categories.forEach(category => {
                 const section = document.createElement('section');
-                section.className = 'bg-white rounded-lg shadow overflow-hidden';
+                section.className = 'bg-white rounded-lg shadow overflow-hidden mb-6';
                 section.innerHTML = `
                     <div class="flex justify-between items-center p-4 border-b border-gray-200">
-                        <div class="flex items-center">
-                            <i data-lucide="chevron-down" class="w-5 h-5 mr-2"></i>
-                            <h2 class="text-xl font-bold text-gray-900">${category.name}</h2>
-                        </div>
-                        <button onclick="deleteCategory('${category.id}')" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        <div class="flex items-center"><i data-lucide="chevron-down" class="w-5 h-5 mr-2"></i><h2 class="text-xl font-bold">${category.name}</h2></div>
+                        <button onclick="deleteCategory('${category.id}')" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
                     <div class="p-4">
                         <div class="flex space-x-3 mb-4">
                             <input type="text" id="input-${category.id}" onkeydown="if(event.key==='Enter') addKeyword('${category.id}')" placeholder="키워드 입력 후 엔터" class="flex-grow border rounded-lg px-4 py-2">
                             <button onclick="addKeyword('${category.id}')" class="bg-indigo-500 text-white p-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5"></i></button>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${category.keywords.map(k => createKeywordCard(category.id, k)).join('')}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            ${category.keywords.map(k => `
+                                <div class="border rounded-lg p-4 bg-gray-50 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between mb-2"><span class="font-bold">${k.name}</span><button onclick="deleteKeyword('${category.id}', '${k.id}')" class="text-gray-300">×</button></div>
+                                        <div class="text-sm space-y-2">${k.loading ? '<div class="loader mx-auto"></div>' : (k.newsHtml || '불러오는 중...')}</div>
+                                    </div>
+                                    <button onclick="fetchRSS('${category.id}', '${k.id}')" class="mt-4 text-indigo-600 text-xs font-bold">↻ 새로고침</button>
+                                </div>`).join('')}
                         </div>
                     </div>`;
                 categoriesContainer.appendChild(section);
+                category.keywords.forEach(k => { if(!k.newsHtml && !k.loading) fetchRSS(category.id, k.id); });
             });
             lucide.createIcons();
         };
 
-        function createKeywordCard(catId, keyword) {
-            let contentHtml = '';
-            if (keyword.loading) contentHtml = '<div class="loader mx-auto my-10"></div>';
-            else if (keyword.news && keyword.news.length > 0) {
-                const displayNews = keyword.showMore ? keyword.allNews : keyword.news;
-                contentHtml = `<ul class="space-y-3">` + displayNews.map(n => `
-                    <li class="pt-3 border-t border-gray-100 first:pt-0 first:border-0">
-                        <a href="${n.url}" target="_blank" class="block hover:bg-gray-50 transition">
-                            <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${n.title}</h4>
-                        </a>
-                    </li>`).join('') + `</ul>`;
-            } else contentHtml = '<p class="text-center text-gray-400 my-10">뉴스가 없습니다.</p>';
+        window.fetchRSS = async (catId, keyId) => {
+            const cat = state.categories.find(c => c.id === catId);
+            const k = cat.keywords.find(k => k.id === keyId);
+            k.loading = true; renderDashboard();
+            try {
+                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q='+encodeURIComponent(k.name)+'&hl=ko&gl=KR&ceid=KR:ko')}`);
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    k.newsHtml = data.items.slice(0, 3).map(i => `<a href="${i.link}" target="_blank" class="block hover:underline text-indigo-700 truncate">• ${i.title}</a>`).join('');
+                } else k.newsHtml = '뉴스 없음';
+            } catch (e) { k.newsHtml = '로드 실패'; }
+            k.loading = false; renderDashboard();
+        };
 
-            return `
-                <div class="border rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-lg font-semibold">${keyword.name}</h3>
-                            <button onclick="deleteKeyword('${catId}', '${keyword.id}')" class="text-gray-300">×</button>
-                        </div>
-                        <div class="min-h-[120px]">${contentHtml}</div>
-                    </div>
-                    <button onclick="refreshKeyword('${catId}', '${keyword.id}')" class="mt-4 text-indigo-600 text-xs font-bold">↻ 새로고침</button>
-                </div>`;
-        }
-
-        // --- 액션 함수들 (엔터 지원 및 자동 저장) ---
         window.addCategory = () => {
-            const input = document.getElementById('new-category-name');
-            if (!input.value.trim()) return;
-            state.categories.push({ id: generateId(), name: input.value.trim(), keywords: [] });
-            input.value = ''; saveCloudData();
+            const val = document.getElementById('new-category-name').value.trim();
+            if (!val) return;
+            state.categories.push({ id: generateId(), name: val, keywords: [] });
+            document.getElementById('new-category-name').value = ''; saveCloudData();
         };
 
         window.addKeyword = (catId) => {
             const input = document.getElementById(`input-${catId}`);
             if (!input.value.trim()) return;
-            const cat = state.categories.find(c => c.id === catId);
-            const newKey = { id: generateId(), name: input.value.trim(), news: [], allNews: [], showMore: false };
-            cat.keywords.push(newKey);
-            saveCloudData();
-            refreshKeyword(catId, newKey.id);
+            state.categories.find(c => c.id === catId).keywords.push({ id: generateId(), name: input.value.trim() });
+            input.value = ''; saveCloudData();
         };
 
         window.deleteKeyword = (catId, keyId) => {
@@ -191,36 +206,13 @@
             saveCloudData();
         };
 
-        window.deleteCategory = (id) => {
-            if (confirm("삭제할까요?")) {
-                state.categories = state.categories.filter(c => c.id !== id);
-                saveCloudData();
-            }
-        };
+        window.deleteCategory = (id) => { if(confirm("삭제할까요?")) { state.categories = state.categories.filter(c => c.id !== id); saveCloudData(); } };
 
-        window.refreshKeyword = async (catId, keyId) => {
-            const k = state.categories.find(c => c.id === catId).keywords.find(k => k.id === keyId);
-            k.loading = true; renderDashboard();
-            try {
-                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q='+encodeURIComponent(k.name)+'&hl=ko&gl=KR&ceid=KR:ko')}`);
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    k.allNews = data.items.map(i => ({ title: i.title, url: i.link }));
-                    k.news = k.allNews.slice(0, 3);
-                }
-            } catch (e) { console.error(e); }
-            k.loading = false; renderDashboard(); // 화면 갱신만 하고 클라우드 저장은 선택사항 (뉴스 데이터는 휘발성)
-        };
-
-        document.getElementById('refresh-all-btn').onclick = async () => {
+        document.getElementById('refresh-all-btn').onclick = () => {
             document.getElementById('refresh-icon').classList.add('animate-spin');
-            for (const c of state.categories) {
-                for (const k of c.keywords) await refreshKeyword(c.id, k.id);
-            }
-            document.getElementById('refresh-icon').classList.remove('animate-spin');
+            state.categories.forEach(c => c.keywords.forEach(k => fetchRSS(c.id, k.id)));
+            setTimeout(() => document.getElementById('refresh-icon').classList.remove('animate-spin'), 2000);
         };
-
-        document.getElementById('alert-modal-close').onclick = () => document.getElementById('alert-modal').classList.add('hidden');
     </script>
 </body>
 </html>
