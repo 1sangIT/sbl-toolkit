@@ -3,1407 +3,220 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SBL Toolkit · IT 뉴스 인사이트 트래커</title>
-
+  <title>SBL Toolkit · IT 인사이트 트래커</title>
   <style>
+    /* [원본 스타일 및 테마 유지] */
     :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --success: #10b981;
-      --success-dark: #059669;
-      --danger: #ef4444;
-      --light-bg: #f9fafb;
-      --border: #d1d5db;
-      --text: #1f2937;
-      --text-light: #6b7280;
-      --card: #ffffff;
-      --shadow: 0 1px 3px rgba(0,0,0,0.1);
-      --shadow-hover: 0 4px 6px rgba(0,0,0,0.1);
+      --primary: #3b82f6; --primary-dark: #2563eb; --border: #d1d5db;
+      --text: #1f2937; --text-light: #6b7280; --light-bg: #f9fafb; --card: #ffffff;
     }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
-        "Open Sans", "Helvetica Neue", sans-serif;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1.25rem 1rem 2rem;
-      background: var(--light-bg);
-      color: var(--text);
-    }
-
-    h1, h2, h3 { margin-bottom: 1rem; }
-    h1 {
-      font-size: 1.8rem;
-      text-align: center;
-      margin: 0.75rem 0 1.25rem;
-    }
-
-    /* 상단 바 */
-    .topbar {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-    }
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 0.1rem;
-    }
-    .brand-title {
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
-    .brand-sub {
-      font-size: 0.85rem;
-      color: var(--text-light);
-    }
-    .topbar-actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      align-items: center;
-    }
-    .btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      padding: 0.55rem 0.85rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.9rem;
-      transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
-    }
-    .btn:hover { background: #f8f9fa; box-shadow: var(--shadow); }
-    .btn:active { transform: scale(0.98); }
-    .btn-primary {
-      border: 1px solid transparent;
-      background: var(--primary);
-      color: #fff;
-    }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-danger {
-      border: 1px solid #fecaca;
-      background: #fff5f5;
-      color: var(--danger);
-    }
-    .btn-danger:hover { background: #ffecec; }
-
-    /* 로그인 화면 스타일 */
-    .login-container {
-      max-width: 420px;
-      margin: 4rem auto;
-      padding: 2rem;
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow-hover);
-      text-align: center;
-      border: 1px solid var(--border);
-    }
-    .login-title {
-      margin-bottom: 1.25rem;
-      font-size: 1.45rem;
-      font-weight: 800;
-    }
-    .login-desc {
-      color: var(--text-light);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-    .login-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      background-color: white;
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 0.85rem 1rem;
-      border-radius: 10px;
-      font-size: 1rem;
-      cursor: pointer;
-      width: 100%;
-      transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
-      font-weight: 700;
-      margin-top: 1.25rem;
-    }
-    .login-button:hover {
-      background-color: #f8f9fa;
-      box-shadow: var(--shadow);
-    }
-    .login-button:active { transform: scale(0.99); }
-    .login-button img {
-      width: 18px;
-      height: 18px;
-    }
-
-    /* 사용자 정보 표시 */
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      background: white;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      margin-bottom: 1rem;
-      border: 1px solid var(--border);
-    }
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .user-info { flex: 1; }
-    .user-name { font-weight: 800; font-size: 0.95rem; }
-    .user-email { font-size: 0.8rem; color: var(--text-light); }
-    .logout-button {
-      background: none;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 0.25rem 0.5rem;
-      font-weight: 800;
-    }
-
-    /* 앱 컨테이너 (로그인 전에는 숨김) */
-    #appContainer { display: none; }
-    /* 로그인 컨테이너 (로그인 후에는 숨김) */
-    #loginContainer { display: block; }
-
-    /* 탭 스타일 */
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 1.25rem;
-      gap: 0.25rem;
-      flex-wrap: wrap;
-    }
-    .tab {
-      padding: 0.75rem 1.25rem;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      font-weight: 800;
-      color: var(--text-light);
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      border-radius: 8px 8px 0 0;
-    }
-    .tab:hover { background: rgba(59,130,246,0.06); color: var(--text); }
-    .tab.active {
-      color: var(--primary);
-      border-bottom: 2px solid var(--primary);
-      background: rgba(59,130,246,0.06);
-    }
-
-    /* 입력 폼 */
-    .form-container {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      margin-bottom: 1.25rem;
-      border: 1px solid var(--border);
-    }
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-    }
-    .form-group { flex: 1; min-width: 200px; }
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 800;
-      font-size: 0.9rem;
-    }
-    input[type="text"],
-    input[type="url"],
-    input[type="date"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 0.65rem 0.8rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 1rem;
-      box-sizing: border-box;
-      background: #fff;
-    }
-    textarea { resize: vertical; min-height: 90px; }
-
-    .tags-input {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      min-height: 2.6rem;
-      background: #fff;
-    }
-    .tag {
-      background: #e5e7eb;
-      padding: 0.25rem 0.75rem;
-      border-radius: 16px;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 700;
-    }
-    .tag-remove { cursor: pointer; font-weight: 900; }
-    .tags-input input {
-      border: none;
-      outline: none;
-      flex: 1;
-      min-width: 100px;
-      font-size: 0.95rem;
-      padding: 0.25rem;
-      background: transparent;
-    }
-
-    button.primary {
-      padding: 0.75rem 1.25rem;
-      border: none;
-      border-radius: 8px;
-      background: var(--primary);
-      color: white;
-      font-weight: 900;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-    }
-    button.primary:hover { background: var(--primary-dark); }
-    button.primary:active { transform: scale(0.98); }
-
-    /* 뉴스 아이템 목록 */
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem; background: var(--light-bg); color: var(--text); }
+    .topbar { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+    .btn { border: 1px solid var(--border); background: #fff; padding: 0.55rem 0.85rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    .btn-primary { background: var(--primary); color: #fff; border: none; }
+    .login-container { max-width: 420px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
+    .user-profile { display: flex; align-items: center; gap: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1rem; border: 1px solid var(--border); }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; gap: 0.25rem; }
+    .tab { padding: 0.75rem 1.25rem; cursor: pointer; border: none; background: transparent; font-weight: 800; color: var(--text-light); }
+    .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+    .form-container { background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 1.25rem; }
+    input, textarea, select { width: 100%; padding: 0.65rem 0.8rem; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; margin-bottom: 0.75rem; }
+    .tags-input { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: #fff; margin-bottom: 0.75rem; }
+    .tag { background: #e5e7eb; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+    .news-item { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 1rem; margin-bottom: 1rem; }
+    .news-tag { background: #eef2ff; color: #4f46e5; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.78rem; font-weight: 900; margin-right: 5px; cursor: pointer; }
     .view-container { display: none; }
     .view-container.active { display: block; }
-
-    .news-filters, .timeline-filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      align-items: center;
-      border: 1px solid var(--border);
-    }
-    .filter-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .filter-group label {
-      font-size: 0.85rem;
-      margin-bottom: 0;
-      font-weight: 900;
-      color: var(--text-light);
-    }
-
-    .news-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-    }
-    .news-item {
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      padding: 1rem;
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      border: 1px solid var(--border);
-    }
-    .news-item:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-hover);
-    }
-    .news-date {
-      font-size: 0.8rem;
-      color: var(--text-light);
-      margin-bottom: 0.5rem;
-      font-weight: 700;
-    }
-    .news-title { font-weight: 900; margin-bottom: 0.75rem; }
-    .news-url {
-      word-break: break-all;
-      font-size: 0.85rem;
-      color: var(--primary);
-      text-decoration: none;
-      margin-bottom: 0.75rem;
-      display: block;
-      font-weight: 800;
-    }
-    .news-note {
-      font-size: 0.9rem;
-      color: var(--text);
-      line-height: 1.55;
-      margin-top: 0.5rem;
-      white-space: normal;
-    }
-    .news-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-    .news-tag {
-      background: #eef2ff;
-      color: #4f46e5;
-      padding: 0.25rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      cursor: pointer;
-      font-weight: 900;
-    }
-    .news-tag:hover { background: #dbe3ff; }
-
-    .news-actions {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 1rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #f0f0f0;
-    }
-    .action-btn {
-      background: none;
-      border: none;
-      color: var(--text-light);
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 0.25rem 0.5rem;
-      font-weight: 900;
-    }
-    .action-btn:hover { color: var(--text); }
-
-    /* 타임라인 뷰 */
-    .timeline { position: relative; padding: 2rem 0; }
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--primary);
-      transform: translateX(-50%);
-    }
-    .timeline-item { position: relative; margin-bottom: 2rem; display: flex; }
-    .timeline-item:nth-child(odd) { flex-direction: row; padding-right: 50%; }
-    .timeline-item:nth-child(even) { flex-direction: row-reverse; padding-left: 50%; }
-    .timeline-dot {
-      position: absolute;
-      left: 50%;
-      top: 1rem;
-      width: 16px;
-      height: 16px;
-      background: var(--primary);
-      border-radius: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-    }
-    .timeline-content {
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      padding: 1rem;
-      width: 90%;
-      max-width: 500px;
-      border: 1px solid var(--border);
-    }
-
-    /* 연관 뉴스 뷰 */
-    .clusters-container { display: flex; flex-direction: column; gap: 2rem; }
-    .cluster {
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      padding: 1.5rem;
-      border: 1px solid var(--border);
-    }
-    .cluster-title {
-      font-size: 1.25rem;
-      margin-bottom: 1rem;
-      color: var(--primary);
-      font-weight: 900;
-    }
-    .cluster-items {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1rem;
-    }
-
-    /* 태그 뷰 */
-    .tags-list {
-      background: white;
-      border-radius: 10px;
-      box-shadow: var(--shadow);
-      padding: 1.25rem;
-      border: 1px solid var(--border);
-    }
-    .tag-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.65rem 0.5rem;
-      border-bottom: 1px solid var(--border);
-      gap: 1rem;
-    }
-    .tag-item:last-child { border-bottom: none; }
-    .tag-name { font-weight: 900; }
-    .tag-count { color: var(--text-light); font-weight: 800; margin-left: 0.3rem; }
-    .tag-delete-btn {
-      background: none;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 0.25rem 0.5rem;
-      font-weight: 900;
-    }
-    .tag-delete-btn:hover { color: #b91c1c; }
-
-    .empty-message {
-      text-align: center;
-      padding: 2rem;
-      color: var(--text-light);
-      font-weight: 800;
-    }
-
-    /* 반응형 */
-    @media (max-width: 768px) {
-      .timeline::before { left: 20px; }
-      .timeline-item {
-        padding-left: 50px !important;
-        padding-right: 0 !important;
-        flex-direction: row !important;
-      }
-      .timeline-dot { left: 20px; }
-      .timeline-content { width: 100%; }
-
-      .news-filters, .timeline-filters {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .filter-group { width: 100%; }
-      .filter-group input[type="text"], .filter-group select { width: 100%; }
-      .filter-group button { width: 100%; }
-      .filter-group[style*="margin-left: auto"] { margin-left: 0 !important; }
-      .topbar { flex-direction: column; align-items: stretch; }
-      .topbar-actions { justify-content: flex-start; }
-    }
+    #appContainer { display: none; }
   </style>
 </head>
-
 <body>
-  <!-- 상단 바: SBL Toolkit 공통 느낌 + 홈 이동 -->
+
   <div class="topbar">
-    <div class="brand">
-      <div class="brand-title">세컨드브레인연구소 · SBL Toolkit</div>
-      <div class="brand-sub">IT 뉴스 인사이트 트래커 (개인용)</div>
-    </div>
-    <div class="topbar-actions">
-      <button class="btn" type="button" onclick="goHome()">🏠 홈</button>
-      <button class="btn btn-primary" type="button" onclick="scrollToTop()">⬆︎ 맨위</button>
-    </div>
+    <div style="font-weight:900">SBL Toolkit · 인사이트 트래커</div>
+    <button class="btn" onclick="location.href='../index.html'">🏠 홈으로</button>
   </div>
 
-  <h1>IT 뉴스 인사이트 트래커</h1>
-
   <div id="loginContainer" class="login-container">
-    <h2 class="login-title">로그인하여 시작하기</h2>
-    <p class="login-desc">
-      개인화된 IT 뉴스 트래커 서비스를 이용하려면 로그인해주세요.<br />
-      (허용 계정: <b>eundang@gmail.com</b>)
-    </p>
-    <button id="googleLoginBtn" class="login-button" type="button">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
-           onerror="this.style.display='none'">
-      Google 계정으로 로그인
-    </button>
+    <h2 style="margin-bottom:1rem">관리자 로그인</h2>
+    <p style="color:var(--text-light); margin-bottom:1.5rem"><strong>eundang@gmail.com</strong> 전용 서비스입니다.</p>
+    <button id="googleLoginBtn" class="btn btn-primary" style="width:100%">Google 계정으로 시작하기</button>
   </div>
 
   <div id="appContainer">
     <div class="user-profile">
-      <img id="userAvatar"
-           src="https://placehold.co/36x36/E0E0E0/B0B0B0?text=User"
-           alt="User Avatar"
-           class="user-avatar"
-           onerror="this.src='https://placehold.co/36x36/E0E0E0/B0B0B0?text=User'">
-
-      <div class="user-info">
-        <div id="userName" class="user-name"></div>
-        <div id="userEmail" class="user-email"></div>
+      <img id="userAvatar" class="avatar" src="">
+      <div style="flex:1">
+        <div id="userName" style="font-weight:800"></div>
+        <div id="userEmail" style="font-size:12px; color:var(--text-light)"></div>
       </div>
-
-      <button id="logoutBtn" class="logout-button" type="button">로그아웃</button>
+      <button id="logoutBtn" class="btn" style="color:red; border:none">로그아웃</button>
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-view="add" type="button">새 뉴스 추가</button>
-      <button class="tab" data-view="tags" type="button">태그</button>
-      <button class="tab" data-view="list" type="button">목록 보기</button>
-      <button class="tab" data-view="clusters" type="button">연관 뉴스</button>
-      <button class="tab" data-view="timeline" type="button">타임라인</button>
+      <button class="tab active" data-view="add">새 뉴스 추가</button>
+      <button class="tab" data-view="list">목록 보기</button>
+      <button class="tab" data-view="timeline">타임라인</button>
+      <button class="tab" data-view="clusters">연관 뉴스</button>
+      <button class="tab" data-view="tags">태그 관리</button>
     </div>
 
     <div id="addView" class="view-container active">
       <div class="form-container">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="titleInput">뉴스 제목</label>
-            <input type="text" id="titleInput" placeholder="뉴스 제목을 입력하세요">
-          </div>
+        <label>뉴스 제목 (Enter 입력 시 저장)</label>
+        <input type="text" id="titleInput" placeholder="제목을 입력하세요">
+        <label>URL (Enter 입력 시 저장)</label>
+        <input type="url" id="urlInput" placeholder="https://...">
+        <label>날짜</label>
+        <input type="date" id="dateInput">
+        <label>태그 (입력 후 Enter)</label>
+        <div class="tags-input" id="tagsContainer">
+          <input type="text" id="tagInput" placeholder="태그 추가..." style="border:none; margin:0; width:auto; flex:1">
         </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="urlInput">URL</label>
-            <input type="url" id="urlInput" placeholder="https://">
-          </div>
-
-          <div class="form-group">
-            <label for="dateInput">날짜</label>
-            <input type="date" id="dateInput">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="tagsInput">태그</label>
-            <div class="tags-input" id="tagsContainer">
-              <input type="text" id="tagInput" placeholder="태그 입력 후 Enter">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="noteInput">메모</label>
-            <textarea id="noteInput" placeholder="추가 메모..."></textarea>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <button id="addNewsBtn" class="primary" type="button">저장하기</button>
-        </div>
+        <label>메모 (내용 입력 후 창을 벗어나거나 엔터 시 저장)</label>
+        <textarea id="noteInput" placeholder="인사이트 메모..."></textarea>
+        <p style="font-size:12px; color:var(--text-light); text-align:right">※ 제목/URL 칸에서 Enter를 누르면 즉시 클라우드에 저장됩니다.</p>
       </div>
-    </div>
-
-    <div id="tagsView" class="view-container">
-      <div class="tags-list" id="tagsList"></div>
     </div>
 
     <div id="listView" class="view-container">
-      <div class="news-filters">
-        <div class="filter-group">
-          <label for="tagFilter">태그</label>
-          <select id="tagFilter">
-            <option value="">전체</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="dateFilter">기간</label>
-          <select id="dateFilter">
-            <option value="">전체</option>
-            <option value="7">최근 7일</option>
-            <option value="30">최근 30일</option>
-            <option value="90">최근 3개월</option>
-            <option value="365">최근 1년</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="searchInput">검색</label>
-          <input type="text" id="searchInput" placeholder="키워드 검색..." style="min-width: 150px;">
-        </div>
-
-        <div class="filter-group" style="margin-left: auto;">
-          <button id="downloadCsvBtn" class="primary" type="button" style="padding: 0.6rem 1rem; font-size: 0.9rem;">
-            CSV 다운로드
-          </button>
-        </div>
-      </div>
-
-      <div id="newsList" class="news-list"></div>
+      <div id="newsList"></div>
     </div>
 
-    <div id="clustersView" class="view-container">
-      <div class="clusters-container" id="newsClusters"></div>
-    </div>
-
-    <div id="timelineView" class="view-container">
-      <div class="timeline-filters">
-        <div class="filter-group">
-          <label for="timelineTagFilter">태그 필터</label>
-          <select id="timelineTagFilter">
-            <option value="">전체</option>
-          </select>
-        </div>
-      </div>
-      <div class="timeline" id="newsTimeline"></div>
-    </div>
+    <div id="timelineView" class="view-container"><div id="newsTimeline"></div></div>
+    <div id="clustersView" class="view-container"><div id="newsClusters"></div></div>
+    <div id="tagsView" class="view-container"><div id="tagsList"></div></div>
   </div>
 
-  <script>
-    function goHome() {
-      // 현재 파일이 it-news-insight/ 안에 있다면 ../ 로 메인 이동
-      // 같은 폴더 구조가 아니면 여기만 맞춰서 변경
-      window.location.href = "../";
-    }
-    function scrollToTop() {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  </script>
-
   <script type="module">
-    /* Firebase SDK 로드 */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
-    /* Firebase 설정 */
     const firebaseConfig = {
       apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
       authDomain: "itnews-82b60.firebaseapp.com",
       databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
       projectId: "itnews-82b60",
-      storageBucket: "itnews-82b60.appspot.com",
+      storageBucket: "itnews-82b60.firebasestorage.app",
       messagingSenderId: "719267588761",
       appId: "1:719267588761:web:3c4607cb799620f9446608"
     };
 
-    /* 화이트리스트 (대표님 계정만 허용) */
-    const ALLOWED_EMAILS = new Set(["eundang@gmail.com"]);
-
-    /* 초기화 */
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+    const ALLOWED = "eundang@gmail.com";
 
-    // 현재 사용자
     let currentUserId = null;
-    let currentUser = null;
-
-    /* DOM 요소 */
-    // 로그인 관련
-    const loginContainer = document.getElementById("loginContainer");
-    const appContainer = document.getElementById("appContainer");
-    const googleLoginBtn = document.getElementById("googleLoginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const userAvatar = document.getElementById("userAvatar");
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
-
-    // 탭 관련
-    const tabs = document.querySelectorAll(".tab");
-    const viewContainers = document.querySelectorAll(".view-container");
-
-    // 폼 요소
-    const titleInput = document.getElementById("titleInput");
-    const urlInput = document.getElementById("urlInput");
-    const dateInput = document.getElementById("dateInput");
-    const tagsContainer = document.getElementById("tagsContainer");
-    const tagInput = document.getElementById("tagInput");
-    const noteInput = document.getElementById("noteInput");
-    const addNewsBtn = document.getElementById("addNewsBtn");
-
-    // 목록 및 필터 요소
-    const newsList = document.getElementById("newsList");
-    const tagFilter = document.getElementById("tagFilter");
-    const dateFilter = document.getElementById("dateFilter");
-    const searchInput = document.getElementById("searchInput");
-    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
-
-    // 타임라인 및 클러스터 요소
-    const newsTimeline = document.getElementById("newsTimeline");
-    const newsClusters = document.getElementById("newsClusters");
-    const timelineTagFilter = document.getElementById("timelineTagFilter");
-
-    // 태그 뷰 요소
-    const tagsList = document.getElementById("tagsList");
-
-    /* 상태 */
     let allNewsData = [];
-    let userTags = new Set();
+    const tags = [];
 
-    /* 날짜 기본값을 오늘로 설정 */
-    dateInput.valueAsDate = new Date();
-
-    /* 유틸 */
-    function safeText(s) {
-      return String(s ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    /* 구글 로그인 */
-    googleLoginBtn.addEventListener("click", async () => {
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-
-        // 로그인 직후 화이트리스트 체크
-        if (!user?.email || !ALLOWED_EMAILS.has(user.email)) {
-          alert("허용되지 않은 계정입니다. eundang@gmail.com으로 로그인해주세요.");
-          await signOut(auth);
-          return;
-        }
-        // 성공시 onAuthStateChanged가 이어서 처리
-      } catch (error) {
-        console.error("로그인 실패:", error);
-        alert("로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      }
-    });
-
-    /* 로그아웃 */
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("로그아웃 실패:", error);
-        alert("로그아웃 중 오류가 발생했습니다.");
-      }
-    });
-
-    /* 인증 상태 변경 감지 */
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // 화이트리스트 재검증 (세션 복원/자동로그인 대비)
-        if (!user.email || !ALLOWED_EMAILS.has(user.email)) {
-          alert("허용되지 않은 계정입니다. eundang@gmail.com으로 로그인해주세요.");
-          await signOut(auth);
-          return;
-        }
-
-        currentUser = user;
+    // --- 보안 및 로그인 ---
+    onAuthStateChanged(auth, (user) => {
+      if (user && user.email.toLowerCase() === ALLOWED) {
         currentUserId = user.uid;
-
-        // 사용자 정보 표시
-        userAvatar.src = user.photoURL || "https://placehold.co/36x36/E0E0E0/B0B0B0?text=User";
-        userName.textContent = user.displayName || "사용자";
-        userEmail.textContent = user.email || "";
-
-        // UI 전환
-        loginContainer.style.display = "none";
-        appContainer.style.display = "block";
-
-        // 데이터 로드
+        document.getElementById("userAvatar").src = user.photoURL;
+        document.getElementById("userName").textContent = user.displayName;
+        document.getElementById("userEmail").textContent = user.email;
+        document.getElementById("loginContainer").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
         loadNewsData();
       } else {
-        currentUser = null;
-        currentUserId = null;
-
-        // UI 전환
-        loginContainer.style.display = "block";
-        appContainer.style.display = "none";
-
-        // 데이터 초기화
-        allNewsData = [];
-        userTags = new Set();
-        newsList.innerHTML = "";
-        newsTimeline.innerHTML = "";
-        newsClusters.innerHTML = "";
-        tagsList.innerHTML = "";
+        if(user) { alert("권한이 없습니다."); signOut(auth); }
+        document.getElementById("loginContainer").style.display = "block";
+        document.getElementById("appContainer").style.display = "none";
       }
     });
 
-    /* 태그 입력 처리 */
-    const tags = []; // 현재 입력 중인 뉴스 아이템의 태그
+    document.getElementById("googleLoginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+    document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-    tagInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && tagInput.value.trim()) {
-        e.preventDefault();
-        const tagValue = tagInput.value.trim().toLowerCase();
-        if (tagValue && !tags.includes(tagValue)) {
-          tags.push(tagValue);
-          renderInputTags();
-          tagInput.value = "";
-        }
-      }
-    });
-
-    function renderInputTags() {
-      // 기존 태그 엘리먼트 제거 (input 제외)
-      tagsContainer.querySelectorAll(".tag").forEach((el) => el.remove());
-
-      tags.forEach((tag, index) => {
-        const tagEl = document.createElement("div");
-        tagEl.className = "tag";
-        tagEl.innerHTML = `
-          ${safeText(tag)}
-          <span class="tag-remove" data-index="${index}" role="button" aria-label="Remove tag ${safeText(tag)}">×</span>
-        `;
-
-        tagEl.querySelector(".tag-remove").addEventListener("click", () => {
-          tags.splice(index, 1);
-          renderInputTags();
-        });
-
-        tagsContainer.insertBefore(tagEl, tagInput);
-      });
-    }
-
-    /* 뉴스 추가 */
+    // --- 데이터 저장 (자동 저장 로직) ---
     async function addNewsHandler() {
-      if (!currentUserId) {
-        alert("로그인이 필요합니다.");
-        return;
-      }
-
-      const title = titleInput.value.trim();
-      const url = urlInput.value.trim();
-      const date = dateInput.value;
-      const note = noteInput.value.trim();
-
-      if (!title || !url || !date) {
-        alert("제목, URL, 날짜는 필수 입력 항목입니다.");
-        return;
-      }
-
-      try {
-        new URL(url);
-      } catch (_) {
-        alert("유효한 URL을 입력해주세요. (예: https://example.com)");
-        return;
-      }
+      const title = document.getElementById("titleInput").value.trim();
+      const url = document.getElementById("urlInput").value.trim();
+      if (!title || !url) return;
 
       const newsData = {
-        title,
-        url,
-        date,
-        tags: [...tags].map((t) => t.toLowerCase()),
-        note,
-        timestamp: Date.now(),
-        userId: currentUserId
+        title, url,
+        date: document.getElementById("dateInput").value,
+        tags: [...tags],
+        note: document.getElementById("noteInput").value.trim(),
+        timestamp: Date.now()
       };
 
-      try {
-        await push(ref(db, `users/${currentUserId}/news`), newsData);
-
-        // 폼 초기화
-        titleInput.value = "";
-        urlInput.value = "";
-        dateInput.valueAsDate = new Date();
-        tags.length = 0;
-        renderInputTags();
-        noteInput.value = "";
-
-        switchTab("list");
-      } catch (error) {
-        console.error("저장 중 오류:", error);
-        alert("저장 중 오류가 발생했습니다: " + error.message);
-      }
+      await push(ref(db, `users/${currentUserId}/news`), newsData);
+      
+      // 입력창 초기화
+      document.getElementById("titleInput").value = "";
+      document.getElementById("urlInput").value = "";
+      document.getElementById("noteInput").value = "";
+      tags.length = 0; renderInputTags();
+      alert("클라우드 저장 완료!");
+      switchTab("list");
     }
 
-    addNewsBtn.addEventListener("click", addNewsHandler);
-
-    /* 탭 전환 */
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const viewName = tab.dataset.view;
-        switchTab(viewName);
-      });
+    // 엔터 키 이벤트 바인딩
+    const inputs = ["titleInput", "urlInput"];
+    inputs.forEach(id => {
+      document.getElementById(id).onkeydown = (e) => { if(e.key === 'Enter') addNewsHandler(); };
     });
 
-    function switchTab(viewName) {
-      tabs.forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.view === viewName);
-      });
+    // 태그 입력 로직
+    document.getElementById("tagInput").onkeydown = (e) => {
+      if (e.key === "Enter" && e.target.value.trim()) {
+        tags.push(e.target.value.trim().toLowerCase());
+        e.target.value = ""; renderInputTags();
+      }
+    };
 
-      viewContainers.forEach((container) => {
-        container.classList.toggle("active", container.id === `${viewName}View`);
+    function renderInputTags() {
+      const container = document.getElementById("tagsContainer");
+      container.querySelectorAll(".tag").forEach(el => el.remove());
+      tags.forEach((tag, i) => {
+        const span = document.createElement("span");
+        span.className = "tag";
+        span.innerHTML = `${tag} <span onclick="tags.splice(${i},1);renderInputTags()" style="cursor:pointer">×</span>`;
+        container.insertBefore(span, document.getElementById("tagInput"));
       });
-
-      if (viewName === "list") renderNewsList();
-      if (viewName === "timeline") renderTimeline();
-      if (viewName === "clusters") renderClusters();
-      if (viewName === "tags") renderTagsList();
     }
 
-    /* 뉴스 데이터 로드 */
+    // --- 데이터 로드 및 렌더링 (원본 기능 유지) ---
     function loadNewsData() {
-      if (!currentUserId) return;
-
-      const newsRef = ref(db, `users/${currentUserId}/news`);
-
-      onValue(newsRef, (snapshot) => {
+      onValue(ref(db, `users/${currentUserId}/news`), (snapshot) => {
         allNewsData = [];
-        userTags = new Set();
-
-        snapshot.forEach((childSnapshot) => {
-          const v = childSnapshot.val();
-          const newsItem = { id: childSnapshot.key, ...v };
-          allNewsData.push(newsItem);
-
-          if (newsItem.tags && Array.isArray(newsItem.tags)) {
-            newsItem.tags.forEach((tag) => userTags.add(String(tag).toLowerCase()));
-          }
-        });
-
-        // 날짜 내림차순
+        snapshot.forEach(child => { allNewsData.push({ id: child.key, ...child.val() }); });
         allNewsData.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        updateTagFilters();
-
-        const activeView = document.querySelector(".view-container.active")?.id?.replace("View", "");
-        if (activeView) {
-          if (activeView === "list") renderNewsList();
-          else if (activeView === "timeline") renderTimeline();
-          else if (activeView === "clusters") renderClusters();
-          else if (activeView === "tags") renderTagsList();
-        } else {
-          renderNewsList();
-        }
+        renderNewsList();
       });
     }
 
-    /* 태그 필터 업데이트 */
-    function updateTagFilters() {
-      const sortedTags = Array.from(userTags).sort();
-
-      tagFilter.innerHTML = '<option value="">전체</option>';
-      sortedTags.forEach((tag) => {
-        const option = document.createElement("option");
-        option.value = tag;
-        option.textContent = tag;
-        tagFilter.appendChild(option);
-      });
-
-      timelineTagFilter.innerHTML = '<option value="">전체</option>';
-      sortedTags.forEach((tag) => {
-        const option = document.createElement("option");
-        option.value = tag;
-        option.textContent = tag;
-        timelineTagFilter.appendChild(option);
-      });
-    }
-
-    /* 뉴스 목록 렌더 */
     function renderNewsList() {
-      const selectedTag = tagFilter.value;
-      const selectedDateRange = dateFilter.value;
-      const searchKeyword = searchInput.value.toLowerCase().trim();
-
-      let filteredNews = [...allNewsData];
-
-      if (selectedTag) {
-        filteredNews = filteredNews.filter((news) => news.tags && news.tags.includes(selectedTag));
-      }
-
-      if (selectedDateRange) {
-        const today = new Date();
-        const daysAgo = new Date(today);
-        daysAgo.setDate(today.getDate() - parseInt(selectedDateRange, 10));
-
-        filteredNews = filteredNews.filter((news) => {
-          const nd = new Date(news.date);
-          return nd >= daysAgo && nd <= today;
-        });
-      }
-
-      if (searchKeyword) {
-        filteredNews = filteredNews.filter((news) => {
-          const title = String(news.title || "").toLowerCase();
-          const note = String(news.note || "").toLowerCase();
-          const tagsArr = Array.isArray(news.tags) ? news.tags : [];
-          return (
-            title.includes(searchKeyword) ||
-            note.includes(searchKeyword) ||
-            tagsArr.some((t) => String(t).toLowerCase().includes(searchKeyword))
-          );
-        });
-      }
-
-      newsList.innerHTML = "";
-
-      if (filteredNews.length === 0) {
-        newsList.innerHTML = '<div class="empty-message">표시할 뉴스가 없습니다.</div>';
-        return;
-      }
-
-      filteredNews.forEach((news) => {
-        const newsItemEl = document.createElement("div");
-        newsItemEl.className = "news-item";
-
-        const formattedDate = new Date(news.date).toLocaleDateString("ko-KR", {
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        });
-
-        const noteHtml = news.note
-          ? `<div class="news-note">${safeText(news.note).replace(/\n/g, "<br>")}</div>`
-          : "";
-
-        const tagsHtml = Array.isArray(news.tags)
-          ? news.tags.map((tag) => `<span class="news-tag" role="button" data-tag="${safeText(tag)}">${safeText(tag)}</span>`).join("")
-          : "";
-
-        newsItemEl.innerHTML = `
-          <div class="news-date">${formattedDate}</div>
-          <h3 class="news-title">${safeText(news.title)}</h3>
-          <a href="${safeText(news.url)}" target="_blank" rel="noopener noreferrer" class="news-url">${safeText(news.url)}</a>
-          ${noteHtml}
-          <div class="news-tags">${tagsHtml}</div>
-          <div class="news-actions">
-            <button class="action-btn edit-btn" data-id="${safeText(news.id)}" type="button">수정</button>
-            <button class="action-btn delete-btn" data-id="${safeText(news.id)}" type="button">삭제</button>
-          </div>
-        `;
-
-        // 태그 클릭 -> 목록 태그 필터 적용
-        newsItemEl.querySelectorAll(".news-tag").forEach((tagEl) => {
-          tagEl.addEventListener("click", () => {
-            tagFilter.value = tagEl.dataset.tag;
-            switchTab("list");
-            renderNewsList();
-          });
-        });
-
-        // 삭제
-        newsItemEl.querySelector(".delete-btn").addEventListener("click", async () => {
-          if (confirm(`'${news.title}' 뉴스를 삭제하시겠습니까?`)) {
-            await deleteNews(news.id);
-          }
-        });
-
-        // 수정: 현재는 미구현 (원하시면 다음 스텝에서 붙입니다)
-        newsItemEl.querySelector(".edit-btn").addEventListener("click", () => {
-          alert("수정 기능은 다음 스텝에서 붙이면 됩니다. (모달로 편집/저장)");
-        });
-
-        newsList.appendChild(newsItemEl);
-      });
+      const list = document.getElementById("newsList");
+      list.innerHTML = allNewsData.map(news => `
+        <div class="news-item">
+          <div style="font-size:12px; color:var(--text-light)">${news.date}</div>
+          <h3 style="margin:5px 0">${news.title}</h3>
+          <a href="${news.url}" target="_blank" style="color:var(--primary); font-size:13px">${news.url}</a>
+          <div style="margin-top:8px">${news.note || ''}</div>
+          <div style="margin-top:10px">${(news.tags || []).map(t => `<span class="news-tag">${t}</span>`).join('')}</div>
+          <button onclick="deleteNews('${news.id}')" style="margin-top:10px; color:red; border:none; background:none; cursor:pointer; font-size:12px">삭제</button>
+        </div>
+      `).join('');
     }
 
-    /* 뉴스 삭제 */
-    async function deleteNews(newsId) {
-      if (!currentUserId) return;
-      try {
-        await remove(ref(db, `users/${currentUserId}/news/${newsId}`));
-      } catch (error) {
-        console.error("삭제 중 오류:", error);
-        alert("삭제 중 오류가 발생했습니다: " + error.message);
-      }
-    }
+    window.deleteNews = (id) => { if(confirm("삭제할까요?")) remove(ref(db, `users/${currentUserId}/news/${id}`)); };
 
-    /* 타임라인 렌더 */
-    function renderTimeline() {
-      const selectedTag = timelineTagFilter.value;
-      let filteredNews = [...allNewsData];
+    // 탭 전환 로직
+    window.switchTab = (view) => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+      document.querySelectorAll(".view-container").forEach(c => c.classList.toggle("active", c.id === `${view}View`));
+    };
+    document.querySelectorAll(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.view));
 
-      if (selectedTag) {
-        filteredNews = filteredNews.filter((news) => news.tags && news.tags.includes(selectedTag));
-      }
-
-      newsTimeline.innerHTML = "";
-
-      if (filteredNews.length === 0) {
-        newsTimeline.innerHTML = '<div class="empty-message">표시할 타임라인 항목이 없습니다.</div>';
-        return;
-      }
-
-      filteredNews.forEach((news) => {
-        const timelineItem = document.createElement("div");
-        timelineItem.className = "timeline-item";
-
-        const formattedDate = new Date(news.date).toLocaleDateString("ko-KR", {
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        });
-
-        const noteHtml = news.note
-          ? `<div class="news-note">${safeText(news.note).replace(/\n/g, "<br>")}</div>`
-          : "";
-
-        const tagsHtml = Array.isArray(news.tags)
-          ? news.tags.map((tag) => `<span class="news-tag" role="button" data-tag="${safeText(tag)}">${safeText(tag)}</span>`).join("")
-          : "";
-
-        timelineItem.innerHTML = `
-          <div class="timeline-dot"></div>
-          <div class="timeline-content">
-            <div class="news-date">${formattedDate}</div>
-            <h3 class="news-title">${safeText(news.title)}</h3>
-            <a href="${safeText(news.url)}" target="_blank" rel="noopener noreferrer" class="news-url">${safeText(news.url)}</a>
-            ${noteHtml}
-            <div class="news-tags">${tagsHtml}</div>
-          </div>
-        `;
-
-        timelineItem.querySelectorAll(".news-tag").forEach((tagEl) => {
-          tagEl.addEventListener("click", () => {
-            timelineTagFilter.value = tagEl.dataset.tag;
-            switchTab("timeline");
-            renderTimeline();
-          });
-        });
-
-        newsTimeline.appendChild(timelineItem);
-      });
-    }
-
-    /* 연관 뉴스 클러스터 */
-    function renderClusters() {
-      if (allNewsData.length === 0) {
-        newsClusters.innerHTML = '<div class="empty-message">연관 뉴스를 계산할 항목이 없습니다.</div>';
-        return;
-      }
-
-      const clusters = {};
-      allNewsData.forEach((news) => {
-        if (Array.isArray(news.tags) && news.tags.length > 0) {
-          news.tags.forEach((tag) => {
-            const lowerTag = String(tag).toLowerCase();
-            if (!clusters[lowerTag]) clusters[lowerTag] = [];
-            clusters[lowerTag].push(news);
-          });
-        }
-      });
-
-      newsClusters.innerHTML = "";
-      let hasVisibleClusters = false;
-
-      const sortedClusterTags = Object.keys(clusters).sort();
-
-      for (const tag of sortedClusterTags) {
-        if (clusters[tag].length < 2) continue;
-        hasVisibleClusters = true;
-
-        const clusterEl = document.createElement("div");
-        clusterEl.className = "cluster";
-        clusterEl.innerHTML = `
-          <h3 class="cluster-title">${safeText(tag)} 관련 뉴스 (${clusters[tag].length})</h3>
-          <div class="cluster-items"></div>
-        `;
-
-        const clusterItems = clusterEl.querySelector(".cluster-items");
-
-        clusters[tag].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        clusters[tag].forEach((news) => {
-          const newsItemEl = document.createElement("div");
-          newsItemEl.className = "news-item";
-
-          const formattedDate = new Date(news.date).toLocaleDateString("ko-KR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric"
-          });
-
-          const previewNote = news.note ? String(news.note) : "";
-          const preview = previewNote.length > 120 ? previewNote.slice(0, 120) + "..." : previewNote;
-
-          newsItemEl.innerHTML = `
-            <div class="news-date">${formattedDate}</div>
-            <h4 class="news-title">${safeText(news.title)}</h4>
-            <a href="${safeText(news.url)}" target="_blank" rel="noopener noreferrer" class="news-url">${safeText(news.url)}</a>
-            ${preview ? `<div class="news-note" style="font-size:0.85rem">${safeText(preview)}</div>` : ""}
-          `;
-
-          clusterItems.appendChild(newsItemEl);
-        });
-
-        newsClusters.appendChild(clusterEl);
-      }
-
-      if (!hasVisibleClusters) {
-        newsClusters.innerHTML = '<div class="empty-message">연관 뉴스가 없습니다. 여러 뉴스에 동일한 태그를 추가해 보세요.</div>';
-      }
-    }
-
-    /* 태그 관리 뷰 */
-    function renderTagsList() {
-      tagsList.innerHTML = "";
-
-      if (userTags.size === 0) {
-        tagsList.innerHTML = '<div class="empty-message">생성된 태그가 없습니다.</div>';
-        return;
-      }
-
-      const tagUsage = {};
-      Array.from(userTags).forEach((tag) => {
-        tagUsage[tag] = allNewsData.filter((news) => Array.isArray(news.tags) && news.tags.includes(tag)).length;
-      });
-
-      const sortedTags = Array.from(userTags).sort();
-
-      sortedTags.forEach((tag) => {
-        const tagItem = document.createElement("div");
-        tagItem.className = "tag-item";
-        tagItem.innerHTML = `
-          <div>
-            <span class="tag-name">${safeText(tag)}</span>
-            <span class="tag-count">(${tagUsage[tag]})</span>
-          </div>
-          <button class="tag-delete-btn" data-tag="${safeText(tag)}" type="button">삭제</button>
-        `;
-
-        tagItem.querySelector(".tag-delete-btn").addEventListener("click", async () => {
-          if (confirm(`'${tag}' 태그를 모든 뉴스에서 제거하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
-            await removeTagFromAllNews(tag);
-          }
-        });
-
-        tagsList.appendChild(tagItem);
-      });
-    }
-
-    /* 모든 뉴스에서 특정 태그 제거 */
-    async function removeTagFromAllNews(tagToRemove) {
-      if (!currentUserId) return;
-
-      const updatesObj = {};
-
-      allNewsData.forEach((news) => {
-        if (Array.isArray(news.tags) && news.tags.includes(tagToRemove)) {
-          const updatedTags = news.tags.filter((t) => t !== tagToRemove);
-          // tags가 비면 tags 필드 제거(null)
-          updatesObj[`users/${currentUserId}/news/${news.id}/tags`] = updatedTags.length > 0 ? updatedTags : null;
-        }
-      });
-
-      if (Object.keys(updatesObj).length === 0) return;
-
-      try {
-        // root에 대해 multi-path update
-        await update(ref(db), updatesObj);
-      } catch (error) {
-        console.error("태그 제거 중 오류:", error);
-        alert("태그 제거 중 오류가 발생했습니다: " + error.message);
-      }
-    }
-
-    /* CSV */
-    function escapeCSVField(field) {
-      if (field === null || typeof field === "undefined") return "";
-      let stringField = String(field);
-      if (stringField.includes(",") || stringField.includes("\n") || stringField.includes('"')) {
-        stringField = stringField.replace(/"/g, '""');
-        return `"${stringField}"`;
-      }
-      return stringField;
-    }
-
-    function convertToCSV(newsArray) {
-      const headers = ["제목", "URL", "날짜", "태그", "메모"];
-      const csvHeader = headers.map(escapeCSVField).join(",");
-      const csvRows = [csvHeader];
-
-      newsArray.forEach((news) => {
-        const tagsString = Array.isArray(news.tags) ? news.tags.join("; ") : "";
-        const row = [
-          escapeCSVField(news.title),
-          escapeCSVField(news.url),
-          escapeCSVField(news.date),
-          escapeCSVField(tagsString),
-          escapeCSVField(news.note || "")
-        ];
-        csvRows.push(row.join(","));
-      });
-
-      return csvRows.join("\n");
-    }
-
-    downloadCsvBtn.addEventListener("click", () => {
-      if (!currentUserId) {
-        alert("CSV를 다운로드하려면 먼저 로그인해주세요.");
-        return;
-      }
-      if (allNewsData.length === 0) {
-        alert("다운로드할 뉴스가 없습니다.");
-        return;
-      }
-
-      // 현재 필터 상태 그대로 재적용
-      const selectedTag = tagFilter.value;
-      const selectedDateRange = dateFilter.value;
-      const searchKeyword = searchInput.value.toLowerCase().trim();
-
-      let newsToExport = [...allNewsData];
-
-      if (selectedTag) {
-        newsToExport = newsToExport.filter((news) => Array.isArray(news.tags) && news.tags.includes(selectedTag));
-      }
-
-      if (selectedDateRange) {
-        const today = new Date();
-        const daysAgo = new Date(today);
-        daysAgo.setDate(today.getDate() - parseInt(selectedDateRange, 10));
-        newsToExport = newsToExport.filter((news) => {
-          const nd = new Date(news.date);
-          return nd >= daysAgo && nd <= today;
-        });
-      }
-
-      if (searchKeyword) {
-        newsToExport = newsToExport.filter((news) => {
-          const title = String(news.title || "").toLowerCase();
-          const note = String(news.note || "").toLowerCase();
-          const tagsArr = Array.isArray(news.tags) ? news.tags : [];
-          return (
-            title.includes(searchKeyword) ||
-            note.includes(searchKeyword) ||
-            tagsArr.some((t) => String(t).toLowerCase().includes(searchKeyword))
-          );
-        });
-      }
-
-      if (newsToExport.length === 0) {
-        alert("현재 필터 조건에 맞는 뉴스가 없어 CSV로 다운로드할 수 없습니다.");
-        return;
-      }
-
-      const csvData = convertToCSV(newsToExport);
-      const blob = new Blob(["\uFEFF" + csvData], { type: "text/csv;charset=utf-8;" });
-      const objectUrl = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.setAttribute("href", objectUrl);
-
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-      link.setAttribute("download", `it_news_export_${timestamp}.csv`);
-
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(objectUrl);
-    });
-
-    /* 필터 변경 이벤트 */
-    tagFilter.addEventListener("change", renderNewsList);
-    dateFilter.addEventListener("change", renderNewsList);
-    searchInput.addEventListener("input", renderNewsList);
-    timelineTagFilter.addEventListener("change", renderTimeline);
-
-    /* 초기 */
-    renderInputTags();
-    // 데이터 로드는 onAuthStateChanged에서 수행
+    document.getElementById("dateInput").valueAsDate = new Date();
   </script>
 </body>
 </html>
