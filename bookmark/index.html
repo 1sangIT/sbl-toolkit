@@ -5,980 +5,253 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SBL Toolkit · 북마크</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* [원본 스타일 유지] */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f5f5f5;
-            --bg-card: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666666;
-            --border-color: #e0e0e0;
-            --accent-color: #4a90e2;
-            --hover-color: #f8f9fa;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --bg-primary: #ffffff; --bg-secondary: #f5f5f5; --bg-card: #ffffff;
+            --text-primary: #1a1a1a; --text-secondary: #666666; --border-color: #e0e0e0;
+            --accent-color: #4a90e2; --hover-color: #f8f9fa; --shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-
         [data-theme="dark"] {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #2d2d2d;
-            --bg-card: #2d2d2d;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --border-color: #404040;
-            --accent-color: #5ba3f5;
-            --hover-color: #3a3a3a;
-            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --bg-primary: #1a1a1a; --bg-secondary: #2d2d2d; --bg-card: #2d2d2d;
+            --text-primary: #e0e0e0; --text-secondary: #a0a0a0; --border-color: #404040;
+            --accent-color: #5ba3f5; --hover-color: #3a3a3a; --shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            transition: background 0.3s ease, color 0.3s ease;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .header {
-            max-width: 1400px;
-            margin: 0 auto 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-small {
-            padding: 8px 12px;
-            font-size: 12px;
-        }
-
-        .search-box {
-            position: relative;
-        }
-
-        .search-box input {
-            padding: 10px 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 14px;
-            width: 250px;
-            transition: all 0.3s ease;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: var(--accent-color);
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-        }
-
-        .theme-toggle {
-            background: var(--bg-card);
-            border: 2px solid var(--border-color);
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.3s ease;
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .category {
-            margin-bottom: 40px;
-        }
-
-        .category-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px 20px;
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .category-header:hover {
-            background: var(--hover-color);
-        }
-
-        .category-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        .category-count {
-            background: var(--accent-color);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .category-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .toggle-icon {
-            font-size: 20px;
-            transition: transform 0.3s ease;
-        }
-
-        .toggle-icon.collapsed {
-            transform: rotate(-90deg);
-        }
-
-        .bookmarks-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .bookmarks-grid.hidden {
-            display: none;
-        }
-
-        .bookmark-card {
-            background: var(--bg-card);
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .bookmark-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow);
-            border-color: var(--accent-color);
-        }
-
-        .bookmark-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-secondary);
-            font-size: 24px;
-        }
-
-        .bookmark-icon img {
-            width: 32px;
-            height: 32px;
-        }
-
-        .bookmark-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            word-break: break-word;
-        }
-
-        .bookmark-url {
-            font-size: 12px;
-            color: var(--text-secondary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .bookmark-stats {
-            display: flex;
-            gap: 10px;
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
-
-        .bookmark-actions {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .bookmark-card:hover .bookmark-actions {
-            opacity: 1;
-        }
-
-        .action-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: none;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
-
-        .action-btn:hover {
-            background: var(--accent-color);
-            color: white;
-        }
-
-        .add-bookmark-card {
-            background: var(--bg-secondary);
-            border: 2px dashed var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 180px;
-        }
-
-        .add-bookmark-card:hover {
-            border-color: var(--accent-color);
-            background: var(--hover-color);
-        }
-
-        .add-icon {
-            font-size: 48px;
-            color: var(--text-secondary);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 25px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: stretch;
-                margin-bottom: 20px;
-            }
-
-            .header h1 {
-                font-size: 24px;
-                text-align: center;
-            }
-
-            .header-controls {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .search-box input {
-                width: 100%;
-            }
-
-            .btn, .btn-secondary {
-                width: 100%;
-            }
-
-            .btn-group {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 5px;
-            }
-
-            .bookmarks-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 12px;
-            }
-
-            .bookmark-card {
-                padding: 15px;
-            }
-
-            .bookmark-icon {
-                width: 40px;
-                height: 40px;
-            }
-
-            .bookmark-icon img {
-                width: 28px;
-                height: 28px;
-            }
-
-            .bookmark-title {
-                font-size: 14px;
-            }
-
-            .category-header {
-                padding: 12px 15px;
-            }
-
-            .category-title {
-                font-size: 16px;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 20px;
-            }
-
-            .bookmark-actions {
-                opacity: 1;
-                background: rgba(0,0,0,0.1);
-                border-radius: 6px;
-                padding: 2px;
-            }
-
-            .add-bookmark-card {
-                min-height: 140px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .bookmarks-grid {
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            }
-        }
-
-        /* 터치 디바이스 최적화 */
-        @media (hover: none) {
-            .bookmark-actions {
-                opacity: 1;
-            }
-
-            .bookmark-card:active {
-                transform: scale(0.98);
-            }
-
-            .btn:active,
-            .action-btn:active {
-                transform: scale(0.95);
-            }
-        }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); transition: 0.3s; padding: 20px; min-height: 100vh; }
+        .header { max-width: 1400px; margin: 0 auto 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 28px; font-weight: 700; }
+        .header-controls { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .btn-group { display: flex; gap: 5px; }
+        .btn-small { padding: 8px 12px; font-size: 12px; }
+        .search-box input { padding: 10px 15px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); width: 250px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; background: var(--accent-color); color: white; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); }
+        .theme-toggle { background: var(--bg-card); border: 2px solid var(--border-color); padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 18px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .category { margin-bottom: 40px; }
+        .category-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px 20px; background: var(--bg-secondary); border-radius: 12px; cursor: pointer; }
+        .category-title { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; }
+        .category-count { background: var(--accent-color); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; }
+        .bookmarks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .bookmark-card { background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; transition: 0.3s; cursor: pointer; position: relative; }
+        .bookmark-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--accent-color); }
+        .bookmark-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--bg-secondary); font-size: 24px; }
+        .bookmark-icon img { width: 32px; height: 32px; }
+        .bookmark-title { font-size: 16px; font-weight: 600; }
+        .bookmark-url { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .bookmark-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; opacity: 0; transition: 0.3s; }
+        .bookmark-card:hover .bookmark-actions { opacity: 1; }
+        .action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .add-bookmark-card { background: var(--bg-secondary); border: 2px dashed var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 180px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-card); border-radius: 16px; padding: 30px; max-width: 500px; width: 90%; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); }
+        #main-content { display: none; } /* 보안을 위해 인증 전 숨김 */
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📚 북마크</h1>
-        <div class="header-controls">
-            <button class="btn btn-secondary btn-small" onclick="goHome()">🏠 홈</button>
 
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="북마크 검색...">
+    <div id="main-content">
+        <div class="header">
+            <h1>📚 북마크</h1>
+            <div class="header-controls">
+                <button class="btn btn-secondary btn-small" onclick="location.href='../index.html'">🏠 홈</button>
+                <div class="search-box"><input type="text" id="searchInput" placeholder="북마크 검색..."></div>
+                <button class="btn" onclick="openAddBookmarkModal()">+ 북마크 추가</button>
+                <button class="btn btn-secondary" onclick="openAddCategoryModal()">+ 카테고리 추가</button>
+                <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
             </div>
-            <button class="btn" onclick="openAddBookmarkModal()">+ 북마크 추가</button>
-            <button class="btn btn-secondary" onclick="openAddCategoryModal()">+ 카테고리 추가</button>
-            <div class="btn-group">
-                <button class="btn btn-secondary btn-small" onclick="exportData()">💾 내보내기</button>
-                <button class="btn btn-secondary btn-small" onclick="importData()">📥 가져오기</button>
-            </div>
-            <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
         </div>
+
+        <div class="container" id="categoriesContainer"></div>
     </div>
 
-    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
-
-    <div class="container" id="categoriesContainer">
-        <!-- 카테고리들이 여기에 동적으로 생성됩니다 -->
-    </div>
-
-    <!-- 북마크 추가/수정 모달 -->
     <div class="modal" id="bookmarkModal">
         <div class="modal-content">
             <div class="modal-header" id="modalTitle">북마크 추가</div>
-            <div class="form-group">
-                <label>제목</label>
-                <input type="text" id="bookmarkTitle" placeholder="사이트 제목">
-            </div>
-            <div class="form-group">
-                <label>URL</label>
-                <input type="url" id="bookmarkUrl" placeholder="https://example.com">
-            </div>
-            <div class="form-group">
-                <label>카테고리</label>
-                <select id="bookmarkCategory">
-                    <!-- 카테고리 옵션들이 동적으로 생성됩니다 -->
-                </select>
-            </div>
+            <div class="form-group"><label>제목</label><input type="text" id="bookmarkTitle"></div>
+            <div class="form-group"><label>URL</label><input type="url" id="bookmarkUrl"></div>
+            <div class="form-group"><label>카테고리</label><select id="bookmarkCategory"></select></div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeBookmarkModal()">취소</button>
-                <button class="btn" onclick="saveBookmark()">저장</button>
+                <button class="btn" id="saveBookmarkBtn">저장</button>
             </div>
         </div>
     </div>
 
-    <!-- 카테고리 추가 모달 -->
     <div class="modal" id="categoryModal">
         <div class="modal-content">
             <div class="modal-header">카테고리 추가</div>
-            <div class="form-group">
-                <label>카테고리 이름</label>
-                <input type="text" id="categoryName" placeholder="예: 개발도구, 뉴스, AI 등">
-            </div>
-            <div class="form-group">
-                <label>아이콘 (이모지)</label>
-                <input type="text" id="categoryIcon" placeholder="예: 💻, 📰, 🤖 등" maxlength="2">
-            </div>
+            <div class="form-group"><label>카테고리 이름</label><input type="text" id="categoryName"></div>
+            <div class="form-group"><label>아이콘 (이모지)</label><input type="text" id="categoryIcon" maxlength="2"></div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeCategoryModal()">취소</button>
-                <button class="btn" onclick="saveCategory()">저장</button>
+                <button class="btn" id="saveCategoryBtn">저장</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // 홈으로 이동 (GitHub Pages: /sbl-toolkit/bookmark/ -> /sbl-toolkit/)
-        function goHome() {
-            window.location.href = "../";
-        }
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-database.js";
 
-        // 데이터 구조
+        const firebaseConfig = {
+            apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+            authDomain: "itnews-82b60.firebaseapp.com",
+            databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+            projectId: "itnews-82b60",
+            storageBucket: "itnews-82b60.firebasestorage.app",
+            messagingSenderId: "719267588761",
+            appId: "1:719267588761:web:3c4607cb799620f9446608"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const ALLOWED = "eundang@gmail.com";
+
+        let currentUserId = null;
         let categories = [];
         let bookmarks = [];
         let editingBookmarkId = null;
 
-        // 초기 데이터 로드
-        function loadData() {
-            const savedCategories = localStorage.getItem('bookmarkCategories');
-            const savedBookmarks = localStorage.getItem('bookmarks');
-            
-            if (savedCategories) {
-                categories = JSON.parse(savedCategories);
+        // 보안 체크 및 데이터 로드 시작
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email.toLowerCase() === ALLOWED) {
+                currentUserId = user.uid;
+                document.getElementById('main-content').style.display = 'block';
+                loadCloudData();
             } else {
-                // 기본 카테고리
-                categories = [
-                    { id: 'work', name: '업무', icon: '💼', visible: true },
-                    { id: 'dev', name: '개발', icon: '💻', visible: true },
-                    { id: 'ai', name: 'AI', icon: '🤖', visible: true },
-                    { id: 'news', name: '뉴스', icon: '📰', visible: true }
-                ];
+                alert("권한이 없습니다.");
+                location.href = "../index.html";
             }
-            
-            if (savedBookmarks) {
-                bookmarks = JSON.parse(savedBookmarks);
-            } else {
-                // 샘플 북마크
-                bookmarks = [
-                    {
-                        id: Date.now() + 1,
-                        title: 'ChatGPT',
-                        url: 'https://chat.openai.com',
-                        category: 'ai',
-                        clicks: 0,
-                        created: Date.now()
-                    },
-                    {
-                        id: Date.now() + 2,
-                        title: 'Claude',
-                        url: 'https://claude.ai',
-                        category: 'ai',
-                        clicks: 0,
-                        created: Date.now()
-                    }
-                ];
-            }
-            
-            saveData();
-        }
+        });
 
-        // 데이터 저장
-        function saveData() {
-            localStorage.setItem('bookmarkCategories', JSON.stringify(categories));
-            localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
-        }
-
-        // 테마 토글
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        }
-
-        // 테마 로드
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-        }
-
-        // 파비콘 가져오기
-        function getFavicon(url) {
-            try {
-                const domain = new URL(url).origin;
-                return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-            } catch {
-                return '';
-            }
-        }
-
-        // 북마크 클릭 처리
-        function openBookmark(id) {
-            const bookmark = bookmarks.find(b => b.id === id);
-            if (bookmark) {
-                bookmark.clicks++;
-                saveData();
-                window.open(bookmark.url, '_blank');
+        // 클라우드 데이터 로드
+        function loadCloudData() {
+            const userRef = ref(db, `users/${currentUserId}/bookmarksData`);
+            onValue(userRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    categories = data.categories || [];
+                    bookmarks = data.bookmarks || [];
+                } else {
+                    // 기본값 설정
+                    categories = [{ id: 'work', name: '업무', icon: '💼', visible: true }];
+                    bookmarks = [];
+                    saveCloudData();
+                }
                 renderCategories();
-            }
+            });
         }
 
-        // 카테고리 렌더링
-        function renderCategories() {
+        // 클라우드 데이터 저장
+        function saveCloudData() {
+            if (!currentUserId) return;
+            set(ref(db, `users/${currentUserId}/bookmarksData`), {
+                categories: categories,
+                bookmarks: bookmarks
+            });
+        }
+
+        // [원본 UI 로직 연결]
+        window.renderCategories = function() {
             const container = document.getElementById('categoriesContainer');
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
             container.innerHTML = '';
             
             categories.forEach(category => {
-                const categoryBookmarks = bookmarks
-                    .filter(b => b.category === category.id)
-                    .filter(b => {
-                        if (!searchTerm) return true;
-                        return b.title.toLowerCase().includes(searchTerm) || 
-                               b.url.toLowerCase().includes(searchTerm);
-                    })
-                    .sort((a, b) => b.clicks - a.clicks);
-                
-                if (searchTerm && categoryBookmarks.length === 0) return;
-                
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'category';
-                
-                const isVisible = category.visible !== false;
-                
-                categoryDiv.innerHTML = `
+                const catBookmarks = bookmarks.filter(b => b.category === category.id)
+                    .filter(b => !searchTerm || b.title.toLowerCase().includes(searchTerm))
+                    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
+
+                const div = document.createElement('div');
+                div.className = 'category';
+                div.innerHTML = `
                     <div class="category-header" onclick="toggleCategory('${category.id}')">
-                        <div class="category-title">
-                            <span>${category.icon}</span>
-                            <span>${category.name}</span>
-                            <span class="category-count">${categoryBookmarks.length}</span>
-                        </div>
-                        <div class="category-actions">
-                            <button class="action-btn" onclick="event.stopPropagation(); deleteCategory('${category.id}')" title="카테고리 삭제">🗑️</button>
-                            <span class="toggle-icon ${isVisible ? '' : 'collapsed'}">▼</span>
-                        </div>
+                        <div class="category-title"><span>${category.icon}</span><span>${category.name}</span><span class="category-count">${catBookmarks.length}</span></div>
+                        <button class="action-btn" onclick="event.stopPropagation(); deleteCategory('${category.id}')">🗑️</button>
                     </div>
-                    <div class="bookmarks-grid ${isVisible ? '' : 'hidden'}" id="grid-${category.id}">
-                        ${categoryBookmarks.map(bookmark => `
-                            <div class="bookmark-card" onclick="openBookmark(${bookmark.id})">
+                    <div class="bookmarks-grid ${category.visible ? '' : 'hidden'}" style="${category.visible ? '' : 'display:none'}">
+                        ${catBookmarks.map(b => `
+                            <div class="bookmark-card" onclick="openBookmark('${b.id}')">
                                 <div class="bookmark-actions">
-                                    <button class="action-btn" onclick="event.stopPropagation(); editBookmark(${bookmark.id})" title="수정">✏️</button>
-                                    <button class="action-btn" onclick="event.stopPropagation(); deleteBookmark(${bookmark.id})" title="삭제">🗑️</button>
+                                    <button class="action-btn" onclick="event.stopPropagation(); editBookmark('${b.id}')">✏️</button>
+                                    <button class="action-btn" onclick="event.stopPropagation(); deleteBookmark('${b.id}')">🗑️</button>
                                 </div>
-                                <div class="bookmark-icon">
-                                    <img src="${getFavicon(bookmark.url)}" onerror="this.style.display='none'" alt="">
-                                </div>
-                                <div class="bookmark-title">${bookmark.title}</div>
-                                <div class="bookmark-url">${bookmark.url}</div>
-                                <div class="bookmark-stats">
-                                    <span>🔥 ${bookmark.clicks}회</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                        <div class="add-bookmark-card" onclick="openAddBookmarkModal('${category.id}')">
-                            <div class="add-icon">+</div>
-                            <div>북마크 추가</div>
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(categoryDiv);
+                                <div class="bookmark-icon"><img src="https://www.google.com/s2/favicons?domain=${new URL(b.url).origin}&sz=128" onerror="this.style.display='none'"></div>
+                                <div class="bookmark-title">${b.title}</div>
+                                <div class="bookmark-url">${b.url}</div>
+                            </div>`).join('')}
+                        <div class="add-bookmark-card" onclick="openAddBookmarkModal('${category.id}')"><div style="font-size:40px">+</div><div>북마크 추가</div></div>
+                    </div>`;
+                container.appendChild(div);
             });
-            
-            if (container.children.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📭</div>
-                        <h2>북마크가 없습니다</h2>
-                        <p>새로운 북마크를 추가해보세요!</p>
-                    </div>
-                `;
-            }
         }
 
-        // 카테고리 토글
-        function toggleCategory(categoryId) {
-            const category = categories.find(c => c.id === categoryId);
-            if (category) {
-                category.visible = !category.visible;
-                saveData();
-                renderCategories();
-            }
-        }
-
-        // 카테고리 삭제
-        function deleteCategory(categoryId) {
-            if (!confirm('이 카테고리와 포함된 모든 북마크를 삭제하시겠습니까?')) return;
-            
-            categories = categories.filter(c => c.id !== categoryId);
-            bookmarks = bookmarks.filter(b => b.category !== categoryId);
-            saveData();
-            renderCategories();
-        }
-
-        // 북마크 모달 열기
-        function openAddBookmarkModal(categoryId = null) {
-            editingBookmarkId = null;
-            document.getElementById('modalTitle').textContent = '북마크 추가';
-            document.getElementById('bookmarkTitle').value = '';
-            document.getElementById('bookmarkUrl').value = '';
-            
-            const categorySelect = document.getElementById('bookmarkCategory');
-            categorySelect.innerHTML = categories.map(c => 
-                `<option value="${c.id}" ${categoryId === c.id ? 'selected' : ''}>${c.icon} ${c.name}</option>`
-            ).join('');
-            
-            document.getElementById('bookmarkModal').classList.add('active');
-        }
-
-        // 북마크 수정
-        function editBookmark(id) {
-            const bookmark = bookmarks.find(b => b.id === id);
-            if (!bookmark) return;
-            
-            editingBookmarkId = id;
-            document.getElementById('modalTitle').textContent = '북마크 수정';
-            document.getElementById('bookmarkTitle').value = bookmark.title;
-            document.getElementById('bookmarkUrl').value = bookmark.url;
-            
-            const categorySelect = document.getElementById('bookmarkCategory');
-            categorySelect.innerHTML = categories.map(c => 
-                `<option value="${c.id}" ${bookmark.category === c.id ? 'selected' : ''}>${c.icon} ${c.name}</option>`
-            ).join('');
-            
-            document.getElementById('bookmarkModal').classList.add('active');
-        }
-
-        // 북마크 저장
-        function saveBookmark() {
+        // [버튼 이벤트 바인딩]
+        document.getElementById('saveBookmarkBtn').onclick = function() {
             const title = document.getElementById('bookmarkTitle').value.trim();
             const url = document.getElementById('bookmarkUrl').value.trim();
             const category = document.getElementById('bookmarkCategory').value;
-            
-            if (!title || !url) {
-                alert('제목과 URL을 입력해주세요.');
-                return;
-            }
-            
+            if (!title || !url) return alert('입력해주세요.');
+
             if (editingBookmarkId) {
-                const bookmark = bookmarks.find(b => b.id === editingBookmarkId);
-                if (bookmark) {
-                    bookmark.title = title;
-                    bookmark.url = url;
-                    bookmark.category = category;
-                }
+                const b = bookmarks.find(x => x.id === editingBookmarkId);
+                b.title = title; b.url = url; b.category = category;
             } else {
-                bookmarks.push({
-                    id: Date.now(),
-                    title,
-                    url,
-                    category,
-                    clicks: 0,
-                    created: Date.now()
-                });
+                bookmarks.push({ id: 'bm_'+Date.now(), title, url, category, clicks: 0 });
             }
-            
-            saveData();
+            saveCloudData();
             closeBookmarkModal();
-            renderCategories();
-        }
+        };
 
-        // 북마크 삭제
-        function deleteBookmark(id) {
-            if (!confirm('이 북마크를 삭제하시겠습니까?')) return;
-            
-            bookmarks = bookmarks.filter(b => b.id !== id);
-            saveData();
-            renderCategories();
-        }
-
-        // 북마크 모달 닫기
-        function closeBookmarkModal() {
-            document.getElementById('bookmarkModal').classList.remove('active');
-            editingBookmarkId = null;
-        }
-
-        // 카테고리 모달 열기
-        function openAddCategoryModal() {
-            document.getElementById('categoryName').value = '';
-            document.getElementById('categoryIcon').value = '';
-            document.getElementById('categoryModal').classList.add('active');
-        }
-
-        // 카테고리 저장
-        function saveCategory() {
+        document.getElementById('saveCategoryBtn').onclick = function() {
             const name = document.getElementById('categoryName').value.trim();
             const icon = document.getElementById('categoryIcon').value.trim() || '📁';
-            
-            if (!name) {
-                alert('카테고리 이름을 입력해주세요.');
-                return;
-            }
-            
-            categories.push({
-                id: 'cat-' + Date.now(),
-                name,
-                icon,
-                visible: true
-            });
-            
-            saveData();
+            if (!name) return alert('이름을 입력하세요.');
+            categories.push({ id: 'cat_'+Date.now(), name, icon, visible: true });
+            saveCloudData();
             closeCategoryModal();
-            renderCategories();
-        }
+        };
 
-        // 카테고리 모달 닫기
-        function closeCategoryModal() {
-            document.getElementById('categoryModal').classList.remove('active');
-        }
+        // [Global 함수들]
+        window.openBookmark = (id) => {
+            const b = bookmarks.find(x => x.id === id);
+            b.clicks = (b.clicks || 0) + 1;
+            saveCloudData();
+            window.open(b.url, '_blank');
+        };
+        window.deleteCategory = (id) => { if(confirm('삭제할까요?')) { categories = categories.filter(c => c.id !== id); saveCloudData(); } };
+        window.deleteBookmark = (id) => { if(confirm('삭제할까요?')) { bookmarks = bookmarks.filter(b => b.id !== id); saveCloudData(); } };
+        window.toggleCategory = (id) => { const c = categories.find(x => x.id === id); c.visible = !c.visible; saveCloudData(); };
+        window.toggleTheme = () => { const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', t); localStorage.setItem('theme', t); };
+        
+        window.openAddBookmarkModal = (catId) => {
+            editingBookmarkId = null; document.getElementById('modalTitle').textContent = '북마크 추가';
+            document.getElementById('bookmarkTitle').value = ''; document.getElementById('bookmarkUrl').value = '';
+            document.getElementById('bookmarkCategory').innerHTML = categories.map(c => `<option value="${c.id}" ${catId===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+            document.getElementById('bookmarkModal').classList.add('active');
+        };
+        window.editBookmark = (id) => {
+            const b = bookmarks.find(x => x.id === id); editingBookmarkId = id;
+            document.getElementById('modalTitle').textContent = '북마크 수정';
+            document.getElementById('bookmarkTitle').value = b.title; document.getElementById('bookmarkUrl').value = b.url;
+            document.getElementById('bookmarkCategory').innerHTML = categories.map(c => `<option value="${c.id}" ${b.category===c.id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+            document.getElementById('bookmarkModal').classList.add('active');
+        };
+        window.closeBookmarkModal = () => document.getElementById('bookmarkModal').classList.remove('active');
+        window.openAddCategoryModal = () => { document.getElementById('categoryName').value = ''; document.getElementById('categoryModal').classList.add('active'); };
+        window.closeCategoryModal = () => document.getElementById('categoryModal').classList.remove('active');
+        document.getElementById('searchInput').oninput = () => renderCategories();
 
-        // 검색
-        document.getElementById('searchInput').addEventListener('input', () => {
-            renderCategories();
-        });
-
-        // 모달 외부 클릭시 닫기
-        document.getElementById('bookmarkModal').addEventListener('click', (e) => {
-            if (e.target.id === 'bookmarkModal') closeBookmarkModal();
-        });
-
-        document.getElementById('categoryModal').addEventListener('click', (e) => {
-            if (e.target.id === 'categoryModal') closeCategoryModal();
-        });
-
-        // 초기화
-        loadTheme();
-        loadData();
-        renderCategories();
-
-        // 내보내기 기능
-        function exportData() {
-            const data = {
-                version: '1.0',
-                exportDate: new Date().toISOString(),
-                categories: categories,
-                bookmarks: bookmarks
-            };
-            
-            const jsonString = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bookmarks-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            alert('북마크가 내보내기 되었습니다!');
-        }
-
-        // 가져오기 트리거
-        function importData() {
-            document.getElementById('importFile').click();
-        }
-
-        // 가져오기 처리
-        function handleImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    if (!data.categories || !data.bookmarks) {
-                        alert('올바른 북마크 파일이 아닙니다.');
-                        return;
-                    }
-                    
-                    const action = confirm(
-                        '기존 북마크를 어떻게 처리할까요?\n\n' +
-                        '확인: 기존 데이터에 추가\n' +
-                        '취소: 기존 데이터 삭제 후 가져오기'
-                    );
-                    
-                    if (action) {
-                        // 추가 모드
-                        const existingCategoryIds = new Set(categories.map(c => c.id));
-                        data.categories.forEach(cat => {
-                            if (!existingCategoryIds.has(cat.id)) {
-                                categories.push(cat);
-                            }
-                        });
-                        
-                        const existingBookmarkIds = new Set(bookmarks.map(b => b.id));
-                        data.bookmarks.forEach(bm => {
-                            if (!existingBookmarkIds.has(bm.id)) {
-                                bookmarks.push(bm);
-                            }
-                        });
-                    } else {
-                        // 교체 모드
-                        categories = data.categories;
-                        bookmarks = data.bookmarks;
-                    }
-                    
-                    saveData();
-                    renderCategories();
-                    alert('북마크를 성공적으로 가져왔습니다!');
-                    
-                } catch (error) {
-                    alert('파일을 읽는 중 오류가 발생했습니다: ' + error.message);
-                }
-            };
-            
-            reader.readAsText(file);
-            event.target.value = ''; // 같은 파일 재선택 가능하도록
-        }
+        // 초기 테마 로드
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
 </body>
 </html>
