@@ -6,151 +6,85 @@
   <title>Second Brain Lab · 업무용 툴킷</title>
 
   <style>
-    :root{
-      --bg:#0b1020; --bg2:#0f1730; --card:#0f1a33;
-      --text:#e9eefc; --muted:#b9c3e6; --line:rgba(255,255,255,.10);
-      --accent:#6ea8ff; --shadow:0 18px 60px rgba(0,0,0,.35); --r:18px;
+    :root {
+      --bg: #0b1020; --bg2: #0f1730; --card: #0f1a33;
+      --text: #e9eefc; --muted: #b9c3e6; --line: rgba(255,255,255,.10);
+      --accent: #6ea8ff; --shadow: 0 18px 60px rgba(0,0,0,.35); --r: 18px;
     }
-    [data-theme="light"]{
-      --bg:#f6f7fb; --bg2:#ffffff; --card:#ffffff;
-      --text:#101828; --muted:#667085; --line:rgba(16,24,40,.10);
-      --accent:#2563eb; --shadow:0 18px 60px rgba(16,24,40,.10);
+    [data-theme="light"] {
+      --bg: #f6f7fb; --bg2: #ffffff; --card: #ffffff;
+      --text: #101828; --muted: #667085; --line: rgba(16,24,40,.10);
+      --accent: #2563eb; --shadow: 0 18px 60px rgba(16,24,40,.10);
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",system-ui,sans-serif;
-      color:var(--text);
-      background:
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+      color: var(--text);
+      background: 
         radial-gradient(1200px 700px at 20% 10%, rgba(110,168,255,.22), transparent 60%),
         radial-gradient(900px 600px at 85% 25%, rgba(167,139,250,.18), transparent 60%),
-        linear-gradient(180deg,var(--bg),var(--bg2));
-      min-height:100vh;
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      min-height: 100vh;
     }
-    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 44px}
-    header{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:14px 16px;border:1px solid var(--line);border-radius:var(--r);
-      background:rgba(255,255,255,.04);backdrop-filter:blur(10px);
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 44px; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r);
+      background: rgba(255,255,255,.04); backdrop-filter: blur(10px);
     }
-    [data-theme="light"] header{background:rgba(255,255,255,.85)}
-    .brand{display:flex;align-items:center;gap:10px;min-width:0}
-    .logo{
-      width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
-      background:linear-gradient(135deg,rgba(110,168,255,.90),rgba(167,139,250,.70));
-      color:#fff;font-weight:900;letter-spacing:-.02em;box-shadow:0 10px 25px rgba(0,0,0,.20);
-      flex:0 0 auto;
+    [data-theme="light"] header { background: rgba(255,255,255,.85); }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .logo {
+      width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+      background: linear-gradient(135deg, rgba(110,168,255,.90), rgba(167,139,250,.70));
+      color: #fff; font-weight: 900; letter-spacing: -.02em; box-shadow: 0 10px 25px rgba(0,0,0,.20);
     }
-    .brand-title{display:flex;flex-direction:column;gap:2px;min-width:0}
-    .brand-title .t1{font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .brand-title .t2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand-title .t1 { font-size: 14px; font-weight: 900; }
+    .brand-title .t2 { font-size: 12px; color: var(--muted); }
 
-    .controls{display:flex;align-items:center;gap:10px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
-    .btn{
-      border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);
-      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:900;font-size:13px;
-      transition:transform .12s ease,border-color .12s ease,background .12s ease;user-select:none;
+    .controls { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      border: 1px solid var(--line); background: rgba(255,255,255,.06); color: var(--text);
+      padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 900; font-size: 13px;
     }
-    [data-theme="light"] .btn{background:rgba(16,24,40,.03)}
-    .btn:hover{transform:translateY(-1px);border-color:rgba(110,168,255,.35)}
-    .btn:active{transform:translateY(0) scale(.99)}
-    .btn.primary{
-      background:linear-gradient(135deg,rgba(110,168,255,.88),rgba(37,99,235,.85));
-      border-color:rgba(110,168,255,.40);color:#fff;
-    }
+    .btn.primary { background: var(--accent); color: #fff; border: none; }
 
-    .hero{
-      margin:22px 0 18px;padding:22px 18px;border-radius:var(--r);border:1px solid var(--line);
-      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
-    }
-    [data-theme="light"] .hero{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.70))}
-    .hero h1{margin:0 0 8px;font-size:26px;letter-spacing:-.02em}
-    .hero p{margin:0;color:var(--muted);line-height:1.55;font-size:14px}
+    .hero { margin: 32px 0 24px; padding: 0 10px; }
+    .hero h1 { margin: 0 0 12px; font-size: 32px; letter-spacing: -.02em; }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 15px; }
 
-    .authbar{
-      margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);
-      background:rgba(255,255,255,.04);
+    .authbar {
+      margin-top: 20px; display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--r);
+      background: rgba(255,255,255,.03);
     }
-    [data-theme="light"] .authbar{background:rgba(255,255,255,.85)}
-    .user{display:flex;align-items:center;gap:10px;min-width:0}
-    .avatar{
-      width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.05);
-      object-fit:cover;
-    }
-    .user-info{display:flex;flex-direction:column;gap:2px;min-width:0}
-    .user-info .u1{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .user-info .u2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .meta{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-    .chip{
-      border:1px solid var(--line);background:rgba(255,255,255,.04);
-      padding:6px 10px;border-radius:999px;font-size:12px;color:var(--muted);
-    }
-    [data-theme="light"] .chip{background:rgba(16,24,40,.03)}
+    .user { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); }
+    .chip { padding: 6px 12px; border-radius: 999px; font-size: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); }
 
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:14px}
-    .card{
-      grid-column:span 4;border:1px solid var(--line);border-radius:var(--r);
-      background:rgba(255,255,255,.05);padding:18px;box-shadow:var(--shadow);
-      position:relative;overflow:hidden;min-height:200px;
-      transition:transform .14s ease,border-color .14s ease;
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    .card {
+      border: 1px solid var(--line); border-radius: var(--r);
+      background: rgba(255,255,255,.05); padding: 24px; position: relative;
+      transition: all .2s ease;
     }
-    [data-theme="light"] .card{background:#fff}
-    .card:hover{transform:translateY(-2px);border-color:rgba(110,168,255,.35)}
-    .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-    .badge{
-      display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;
-      border:1px solid var(--line);background:rgba(255,255,255,.04);font-weight:900;font-size:12px;
-    }
-    [data-theme="light"] .badge{background:rgba(16,24,40,.03)}
-    .icon{
-      width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
-      background:linear-gradient(135deg,rgba(110,168,255,.22),rgba(167,139,250,.18));
-      border:1px solid var(--line);font-size:22px;flex:0 0 auto;
-    }
-    .card h2{margin:14px 0 6px;font-size:18px;letter-spacing:-.01em}
-    .card p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
-    .card-actions{
-      position:absolute;left:18px;right:18px;bottom:16px;display:flex;gap:10px
-    }
-    a.action{
-      flex:1;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:8px;
-      padding:11px 12px;border-radius:14px;border:1px solid var(--line);
-      font-weight:900;font-size:13px;color:var(--text);background:rgba(255,255,255,.06);
-      transition:transform .12s ease,border-color .12s ease,background .12s ease;
-    }
-    [data-theme="light"] a.action{background:rgba(16,24,40,.03)}
-    a.action.primary{
-      background:linear-gradient(135deg,rgba(110,168,255,.88),rgba(37,99,235,.85));
-      border-color:rgba(110,168,255,.40);color:#fff;
-    }
-    a.action:hover{transform:translateY(-1px);border-color:rgba(110,168,255,.35)}
-    a.action:active{transform:translateY(0) scale(.99)}
-    .disabled{pointer-events:none;opacity:.55;filter:saturate(.7)}
+    .card.locked { opacity: 0.6; filter: grayscale(0.5); }
+    .card h2 { margin: 16px 0 8px; font-size: 18px; }
+    .card p { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
 
-    footer{margin-top:16px;color:var(--muted);font-size:12px;text-align:center;padding:12px 0 0}
-
-    .notice{
-      margin-top:12px;
-      padding:12px 14px;
-      border:1px solid var(--line);
-      border-radius:var(--r);
-      background:rgba(255,255,255,.04);
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.6;
+    .action {
+      display: flex; justify-content: center; align-items: center;
+      width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
+      text-decoration: none; font-weight: 900; font-size: 14px; color: var(--text);
+      background: rgba(255,255,255,.06); transition: all .1s;
     }
-    [data-theme="light"] .notice{background:rgba(255,255,255,.85)}
+    .action.primary { background: var(--accent); color: #fff; border: none; }
+    .action.disabled { pointer-events: none; background: #333; color: #666; border: none; }
 
-    @media (max-width:980px){.card{grid-column:span 6}}
-    @media (max-width:640px){
-      header{align-items:flex-start;flex-wrap:wrap}
-      .controls{width:100%}
-      .hero h1{font-size:22px}
-      .card{grid-column:span 12}
-      .authbar{flex-direction:column;align-items:stretch}
-      .meta{justify-content:flex-start}
-    }
+    footer { margin-top: 40px; text-align: center; font-size: 12px; color: var(--muted); opacity: 0.6; }
+
+    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 
@@ -161,141 +95,58 @@
         <div class="logo">SBL</div>
         <div class="brand-title">
           <div class="t1">Second Brain Lab</div>
-          <div class="t2">세컨드브레인연구소 · 업무용 툴킷</div>
+          <div class="t2">업무용 전용 툴킷</div>
         </div>
       </div>
-
       <div class="controls">
-        <button class="btn" id="themeBtn" type="button">🌓 테마</button>
-        <button class="btn" id="refreshBtn" type="button">↻ 상태</button>
-        <button class="btn primary" id="loginBtn" type="button">Google 로그인</button>
-        <button class="btn" id="logoutBtn" type="button" style="display:none;">로그아웃</button>
+        <button class="btn" id="themeBtn">🌓 테마</button>
+        <button class="btn primary" id="loginBtn">Google 로그인</button>
+        <button class="btn" id="logoutBtn" style="display:none;">로그아웃</button>
       </div>
     </header>
 
     <section class="hero">
-      <h1>업무용 툴킷</h1>
-      <p>
-        로그인 후, 북마크 / IT 뉴스 / 트래커를 실행한다.
-        접근은 <code>eundang@gmail.com</code> 계정으로만 제한한다.
-      </p>
+      <h1 id="heroTitle">관리자 전용 대시보드</h1>
+      <p id="heroMsg">접근 권한이 필요합니다. <strong>eundang@gmail.com</strong> 계정으로 로그인해주세요.</p>
     </section>
 
-    <div class="authbar" id="authBar">
+    <div class="authbar">
       <div class="user">
-        <img class="avatar" id="avatar" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Crect width='100%25' height='100%25' rx='17' fill='%23cccccc'/%3E%3C/svg%3E">
+        <img class="avatar" id="avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='100%25' height='100%25' fill='%23333'/%3E%3C/svg%3E">
         <div class="user-info">
-          <div class="u1" id="userName">로그인이 필요함</div>
-          <div class="u2" id="userEmail">GitHub Pages + Firebase Auth</div>
+          <div class="u1" id="userName" style="font-weight:900">GUEST</div>
+          <div id="userEmail" style="font-size:12px; color:var(--muted)">로그인이 필요함</div>
         </div>
       </div>
-      <div class="meta">
-        <span class="chip" id="statusChip">상태: GUEST</span>
-        <span class="chip" id="envChip">배포: https://1sangit.github.io/sbl-toolkit/</span>
-      </div>
+      <span class="chip" id="statusChip">접근 제한됨</span>
     </div>
 
-    <div class="notice" id="notice">
-      <strong>접근 제어:</strong> <code>eundang@gmail.com</code> 계정만 사용하도록 제한되어 있다.<br/>
-      <strong>필수 설정:</strong><br/>
-      1) Firebase Auth → Authorized domains에 <code>1sangit.github.io</code> 추가<br/>
-      2) 아래 코드의 <code>firebaseConfig</code>를 Firebase 콘솔 값으로 교체
-    </div>
-
-    <section class="grid" id="toolGrid">
-      <div class="card">
-        <div class="card-top">
-          <div class="badge">📚 북마크</div>
-          <div class="icon">🔖</div>
-        </div>
-        <h2>북마크 대시보드</h2>
-        <p>카테고리별 링크 등록/수정/삭제. 클릭 통계 기반 정렬.</p>
-        <div class="meta">
-          <span class="chip">경로: <code>/bookmark/</code></span>
-          <span class="chip" id="bmCount">-</span>
-        </div>
-        <div class="card-actions">
-          <a class="action primary toolLink disabled" href="./bookmark/" rel="noopener">열기</a>
-          <a class="action toolLink disabled" href="./bookmark/" rel="noopener">관리</a>
-        </div>
+    <section class="grid">
+      <div class="card locked" id="card-bookmark">
+        <h2>📚 북마크</h2>
+        <p>링크 카테고리 관리 및 대시보드</p>
+        <a class="action disabled toolLink" href="./bookmark/">실행하기</a>
       </div>
-
-      <div class="card">
-        <div class="card-top">
-          <div class="badge">📰 IT 뉴스</div>
-          <div class="icon">🧠</div>
-        </div>
-        <h2>뉴스 리더</h2>
-        <p>RSS/키워드 뉴스 수집 및 읽기 흐름 관리.</p>
-        <div class="meta">
-          <span class="chip">경로: <code>/it-news/</code></span>
-          <span class="chip" id="newsCount">-</span>
-        </div>
-        <div class="card-actions">
-          <a class="action primary toolLink disabled" href="./it-news/" rel="noopener">열기</a>
-          <a class="action toolLink disabled" href="./it-news/" rel="noopener">관리</a>
-        </div>
+      <div class="card locked" id="card-news">
+        <h2>📰 IT 뉴스</h2>
+        <p>키워드별 RSS 뉴스 수집 리더</p>
+        <a class="action disabled toolLink" href="./it-news/">실행하기</a>
       </div>
-
-      <div class="card">
-        <div class="card-top">
-          <div class="badge">🧾 Tracker</div>
-          <div class="icon">📌</div>
-        </div>
-        <h2>IT 뉴스 인사이트 트래커</h2>
-        <p>뉴스 기록/태그/타임라인/클러스터. (현재: tracker/index.html)</p>
-        <div class="meta">
-          <span class="chip">경로: <code>/tracker/</code></span>
-          <span class="chip" id="trackerStatus">-</span>
-        </div>
-        <div class="card-actions">
-          <a class="action primary toolLink disabled" href="./tracker/" rel="noopener">열기</a>
-          <a class="action toolLink disabled" href="./tracker/" rel="noopener">관리</a>
-        </div>
+      <div class="card locked" id="card-tracker">
+        <h2>🧾 Tracker</h2>
+        <p>인사이트 트래커 및 타임라인</p>
+        <a class="action disabled toolLink" href="./tracker/">실행하기</a>
       </div>
     </section>
 
-    <footer>Second Brain Lab · Internal Toolkit</footer>
+    <footer>&copy; Second Brain Lab. Internal Use Only.</footer>
   </div>
 
   <script type="module">
-    // =====================
-    // Theme
-    // =====================
-    const THEME_KEY = "sbl_toolkit_theme";
-    const root = document.documentElement;
-
-    function loadTheme(){
-      const saved = localStorage.getItem(THEME_KEY);
-      const preferDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = saved || (preferDark ? "dark" : "light");
-      root.setAttribute("data-theme", theme);
-    }
-    function toggleTheme(){
-      const cur = root.getAttribute("data-theme") || "dark";
-      const next = cur === "dark" ? "light" : "dark";
-      root.setAttribute("data-theme", next);
-      localStorage.setItem(THEME_KEY, next);
-    }
-    loadTheme();
-    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
-
-    // =====================
-    // Firebase SDK (Web, modular)
-    // =====================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import {
-      getAuth,
-      GoogleAuthProvider,
-      signInWithPopup,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-    // =====================
-    // Firebase config (여기 교체)
-    // Firebase Console → Project settings → Your apps(Web) → Config 복사
-    // =====================
+    // ⚠️ [중요] 나중에 파이어베이스 설정값으로 반드시 교체하세요!
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -305,119 +156,62 @@
       appId: "YOUR_APP_ID"
     };
 
-    // =====================
-    // App init
-    // =====================
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-
-    // =====================
-    // UI handles
-    // =====================
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const refreshBtn = document.getElementById("refreshBtn");
-
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
-    const avatar = document.getElementById("avatar");
-    const statusChip = document.getElementById("statusChip");
-
-    const toolLinks = Array.from(document.querySelectorAll(".toolLink"));
-    const bmCount = document.getElementById("bmCount");
-    const newsCount = document.getElementById("newsCount");
-    const trackerStatus = document.getElementById("trackerStatus");
-
-    // Allowed email (single-user hard limit)
     const ALLOWED_EMAIL = "eundang@gmail.com";
 
-    function setLinksEnabled(enabled){
-      for (const a of toolLinks){
-        a.classList.toggle("disabled", !enabled);
-        if (!enabled){
-          a.setAttribute("aria-disabled", "true");
-          a.setAttribute("tabindex", "-1");
-        } else {
-          a.removeAttribute("aria-disabled");
-          a.removeAttribute("tabindex");
+    // 테마 토글
+    document.getElementById("themeBtn").onclick = () => {
+      const root = document.documentElement;
+      const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+    };
+
+    // 로그인/로그아웃 로직
+    document.getElementById("loginBtn").onclick = async () => {
+      try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+      catch (e) { console.error(e); }
+    };
+    document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+    // 권한에 따른 UI 활성화 함수
+    function updateUI(user) {
+      const isAllowed = user && user.email.toLowerCase() === ALLOWED_EMAIL;
+      const toolLinks = document.querySelectorAll(".toolLink");
+      const cards = document.querySelectorAll(".card");
+
+      if (isAllowed) {
+        document.getElementById("heroTitle").textContent = "반갑습니다, 대표님";
+        document.getElementById("heroMsg").textContent = "모든 업무용 도구가 활성화되었습니다.";
+        document.getElementById("userName").textContent = user.displayName;
+        document.getElementById("userEmail").textContent = user.email;
+        document.getElementById("avatar").src = user.photoURL;
+        document.getElementById("statusChip").textContent = "관리자 권한";
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "block";
+
+        cards.forEach(c => c.classList.remove("locked"));
+        toolLinks.forEach(l => {
+          l.classList.remove("disabled");
+          l.classList.add("primary");
+        });
+      } else {
+        if (user) {
+          alert("권한이 없는 계정입니다.");
+          signOut(auth);
         }
+        // 초기화 상태
+        document.getElementById("loginBtn").style.display = "block";
+        document.getElementById("logoutBtn").style.display = "none";
+        cards.forEach(c => c.classList.add("locked"));
+        toolLinks.forEach(l => {
+          l.classList.add("disabled");
+          l.classList.remove("primary");
+        });
       }
     }
 
-    function resetBadges(){
-      bmCount.textContent = "-";
-      newsCount.textContent = "-";
-      trackerStatus.textContent = "-";
-    }
-
-    function setBadgesLoggedIn(){
-      bmCount.textContent = "상태: READY";
-      newsCount.textContent = "상태: READY";
-      trackerStatus.textContent = "상태: READY";
-    }
-
-    // =====================
-    // Auth
-    // =====================
-    async function loginWithGoogle(){
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    }
-    async function logout(){
-      await signOut(auth);
-    }
-
-    loginBtn.addEventListener("click", async () => {
-      try { await loginWithGoogle(); }
-      catch (e) { alert(e?.message || String(e)); }
-    });
-
-    logoutBtn.addEventListener("click", async () => {
-      try { await logout(); }
-      catch (e) { alert(e?.message || String(e)); }
-    });
-
-    refreshBtn.addEventListener("click", async () => {
-      const u = auth.currentUser;
-      if (!u) return;
-      // 지금은 “상태”만 갱신 (각 앱의 DB/구조가 다르기 때문)
-      setBadgesLoggedIn();
-    });
-
-    async function ensureAllowed(user){
-      return (user?.email || "").toLowerCase() === ALLOWED_EMAIL;
-    }
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user){
-        userName.textContent = "로그인이 필요함";
-        userEmail.textContent = "Google 로그인 후 도구 사용 가능";
-        statusChip.textContent = "상태: GUEST";
-        loginBtn.style.display = "";
-        logoutBtn.style.display = "none";
-        setLinksEnabled(false);
-        resetBadges();
-        return;
-      }
-
-      const allowed = await ensureAllowed(user);
-      if (!allowed){
-        alert("접근 권한이 없습니다.");
-        await signOut(auth);
-        return;
-      }
-
-      userName.textContent = user.displayName || "사용자";
-      userEmail.textContent = user.email || "";
-      statusChip.textContent = "상태: LOGGED IN";
-      if (user.photoURL) avatar.src = user.photoURL;
-
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "";
-      setLinksEnabled(true);
-
-      setBadgesLoggedIn();
-    });
+    onAuthStateChanged(auth, updateUI);
   </script>
 </body>
 </html>
