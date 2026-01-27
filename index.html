@@ -16,7 +16,7 @@
       color: var(--text); background: linear-gradient(180deg, var(--bg), var(--bg2));
       min-height: 100vh;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 18px; }
     header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r);
@@ -35,13 +35,15 @@
       padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--r);
       background: rgba(255,255,255,.02);
     }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    /* 4개 배치를 위해 2열 그리드로 변경 */
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; }
     .card {
       border: 1px solid var(--line); border-radius: var(--r);
       background: rgba(255,255,255,.05); padding: 28px; opacity: 0.4; filter: grayscale(1);
       transition: 0.3s ease; text-align: center;
     }
     .card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--accent); }
+    .card h2 { margin-top: 0; }
     .action {
       display: block; margin-top: 20px; padding: 12px; border-radius: 12px;
       text-decoration: none; font-weight: 900; color: #666; background: #222;
@@ -49,7 +51,7 @@
     }
     .action.active { background: var(--accent); color: #fff; pointer-events: auto; }
     footer { margin-top: 60px; text-align: center; font-size: 12px; opacity: 0.4; }
-    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -73,9 +75,26 @@
     </div>
 
     <section class="grid">
-      <div class="card" id="c1"><h2>📚 북마크</h2><a class="action" id="a1" href="./bookmark/">실행하기</a></div>
-      <div class="card" id="c2"><h2>📰 IT 뉴스</h2><a class="action" id="a2" href="./it-news/">실행하기</a></div>
-      <div class="card" id="c3"><h2>🧾 Tracker</h2><a class="action" id="a3" href="./tracker/">실행하기</a></div>
+      <div class="card" id="c1">
+        <h2>📚 북마크</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">업무용 링크 모음</p>
+        <a class="action" id="a1" href="./bookmark/">실행하기</a>
+      </div>
+      <div class="card" id="c2">
+        <h2>📰 IT 뉴스</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">RSS 뉴스 리더</p>
+        <a class="action" id="a2" href="./it-news/">실행하기</a>
+      </div>
+      <div class="card" id="c3">
+        <h2>🧾 Tracker</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">인사이트 아카이빙</p>
+        <a class="action" id="a3" href="./tracker/">실행하기</a>
+      </div>
+      <div class="card" id="c4">
+        <h2>🎯 빅스톤</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">연간 목표 & 만다라트</p>
+        <a class="action" id="a4" href="./bitstone/">실행하기</a>
+      </div>
     </section>
 
     <footer>&copy; Second Brain Lab. 업무 전용 공간입니다.</footer>
@@ -85,7 +104,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-    // 대표님께서 요청하신 '뉴스트래커' 전용 설정값
+    // 통합된 firebaseConfig
     const firebaseConfig = {
       apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
       authDomain: "itnews-82b60.firebaseapp.com",
@@ -105,8 +124,9 @@
 
     onAuthStateChanged(auth, (user) => {
       const isAllowed = user && user.email.toLowerCase() === ALLOWED;
-      const ids = ["c1","c2","c3"];
-      const btnIds = ["a1","a2","a3"];
+      // c4, a4 추가됨
+      const ids = ["c1","c2","c3","c4"];
+      const btnIds = ["a1","a2","a3","a4"];
 
       if (isAllowed) {
         document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
