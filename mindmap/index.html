@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MindCanvas - Simple MindMap (Cloud)</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .noselect {
+            -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none;
+            -moz-user-select: none; -ms-user-select: none; user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+            authDomain: "itnews-82b60.firebaseapp.com",
+            databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+            projectId: "itnews-82b60",
+            storageBucket: "itnews-82b60.firebasestorage.app",
+            messagingSenderId: "719267588761",
+            appId: "1:719267588761:web:3c4607cb799620f9446608"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+        const ALLOWED_EMAIL = "eundang@gmail.com";
+
+        // Global Service Object for React
+        window.SBL_MindMap = {
+            login: () => signInWithPopup(auth, new GoogleAuthProvider()),
+            
+            // 데이터 저장 (Debounce 처리 등은 React 쪽에서 제어 권장하지만 여기서는 단순 저장)
+            save: (nodes) => {
+                const user = auth.currentUser;
+                if (user && user.email === ALLOWED_EMAIL) {
+                    set(ref(db, `users/${user.uid}/mindmap`), nodes);
+                }
+            },
+
+            // 초기화 및 데이터 리스닝
+            init: (onLoad, onAuthUpdate) => {
+                onAuthStateChanged(auth, (user) => {
+                    if (user && user.email === ALLOWED_EMAIL) {
+                        onAuthUpdate(user);
+                        // 데이터 로드 (최초 1회 및 변경 감지)
+                        onValue(ref(db, `users/${user.uid}/mindmap`), (snapshot) => {
+                            const data = snapshot.val();
+                            if (data) onLoad(data);
+                        });
+                    } else {
+                        onAuthUpdate(null);
+                        if (user) alert("권한이 없는 계정입니다.");
+                    }
+                });
+            }
+        };
+        
+        // React 로드 알림
+        window.dispatchEvent(new Event('SBL_READY'));
+    </script>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useLayoutEffect, useCallback } = React;
+
+        // --- Icons ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Plus = (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>;
+        const Minus = (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconBase>;
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></IconBase>;
+        const Layout = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></IconBase>;
+        const AlignCenter = (props) => <IconBase {...props}><line x1="18" y1="10" x2="6" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="18" y1="18" x2="6" y2="18"></line></IconBase>;
+        const Copy = (props) => <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase>;
+        const Scissors = (props) => <IconBase {...props}><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></IconBase>;
+        const Clipboard = (props) => <IconBase {...props}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></IconBase>;
+        const Home = (props) => <IconBase {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></IconBase>;
+
+        const INITIAL_NODES = [
+            { id: 'root', text: '중심 토픽', x: 0, y: 0, width: 160, height: 60, parentId: null, color: '#3b82f6' },
+            { id: '1', text: '아이디어 1', x: 0, y: -150, width: 140, height: 50, parentId: 'root', color: '#10b981' },
+            { id: '2', text: '아이디어 2', x: 200, y: 100, width: 140, height: 50, parentId: 'root', color: '#f59e0b' },
+            { id: '3', text: '아이디어 3', x: -200, y: 100, width: 140, height: 50, parentId: 'root', color: '#ef4444' },
+        ];
+
+        function App() {
+            const [nodes, setNodes] = useState(INITIAL_NODES);
+            const [scale, setScale] = useState(1);
+            const [offset, setOffset] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+            const [selectedId, setSelectedId] = useState(null);
+            
+            const [isDragging, setIsDragging] = useState(false);
+            const [isPanning, setIsPanning] = useState(false);
+            const [isResizing, setIsResizing] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const [dragSnapshot, setDragSnapshot] = useState(null);
+            const [initialOffset, setInitialOffset] = useState({ x: 0, y: 0 });
+            const [editingId, setEditingId] = useState(null);
+            const [clipboard, setClipboard] = useState(null); 
+            const [isMultiMove, setIsMultiMove] = useState(true);
+            const [pinchDist, setPinchDist] = useState(null);
+            
+            // Firebase Auth State
+            const [user, setUser] = useState(null);
+            const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+
+            const containerRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const saveTimeoutRef = useRef(null);
+
+            // --- Firebase Init ---
+            useEffect(() => {
+                const checkFirebase = () => {
+                    if (window.SBL_MindMap) {
+                        window.SBL_MindMap.init(
+                            (data) => {
+                                // 외부(파이어베이스)에서 데이터가 왔을 때
+                                if (data && Array.isArray(data)) {
+                                    setNodes(data);
+                                }
+                            },
+                            (userInfo) => {
+                                setUser(userInfo);
+                                setIsFirebaseReady(true);
+                            }
+                        );
+                    } else {
+                        setTimeout(checkFirebase, 100);
+                    }
+                };
+                checkFirebase();
+            }, []);
+
+            // --- Auto Save (Debounce) ---
+            useEffect(() => {
+                if (!isFirebaseReady || !user) return;
+
+                // 변경 발생 시 1초 뒤 저장 (너무 잦은 저장 방지)
+                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                
+                saveTimeoutRef.current = setTimeout(() => {
+                    if (window.SBL_MindMap) {
+                        window.SBL_MindMap.save(nodes);
+                    }
+                }, 1000);
+
+                return () => clearTimeout(saveTimeoutRef.current);
+            }, [nodes, isFirebaseReady, user]);
+
+
+            // --- Utilities & Handlers (기존 로직 유지) ---
+            const screenToWorld = (sx, sy) => ({ x: (sx - offset.x) / scale, y: (sy - offset.y) / scale });
+            const generateId = () => Math.random().toString(36).substr(2, 9);
+            const getSubtreeMaxY = (nodeId) => {
+                let maxY = -Infinity;
+                const traverse = (id) => {
+                    const node = nodes.find(n => n.id === id);
+                    if(!node) return;
+                    const bottom = node.y + node.height;
+                    if(bottom > maxY) maxY = bottom;
+                    nodes.filter(n => n.parentId === id).forEach(c => traverse(c.id));
+                };
+                traverse(nodeId);
+                return maxY === -Infinity ? null : maxY;
+            };
+
+            useLayoutEffect(() => {
+                const newNodes = nodes.map(node => {
+                    const el = document.getElementById(`node-${node.id}`);
+                    if (el) {
+                        const actualHeight = el.offsetHeight;
+                        if (Math.abs(actualHeight - node.height) > 0) return { ...node, height: actualHeight };
+                    }
+                    return node;
+                });
+                if (newNodes.some((n, i) => n.height !== nodes[i].height)) setNodes(newNodes);
+            }, [nodes]); 
+
+            const autoLayout = () => {
+                const root = nodes.find(n => !n.parentId);
+                if (!root) return;
+                const newNodes = [...nodes];
+                const getChildren = (id) => nodes.filter(n => n.parentId === id);
+                const calculateSubtreeHeight = (nodeId) => {
+                    const children = getChildren(nodeId);
+                    if (children.length === 0) return 60; 
+                    return children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
+                };
+                const layoutNode = (nodeId, x, y, direction) => { 
+                    const children = getChildren(nodeId);
+                    let currentY = y - (calculateSubtreeHeight(nodeId) / 2);
+                    children.forEach(child => {
+                        const childHeight = calculateSubtreeHeight(child.id);
+                        const childY = currentY + (childHeight / 2);
+                        const childIndex = newNodes.findIndex(n => n.id === child.id);
+                        if (childIndex !== -1) {
+                            newNodes[childIndex] = { ...newNodes[childIndex], x: x + (direction * 200), y: childY };
+                            layoutNode(child.id, x + (direction * 200), childY, direction);
+                        }
+                        currentY += childHeight;
+                    });
+                };
+                const rootIndex = newNodes.findIndex(n => n.id === root.id);
+                newNodes[rootIndex] = { ...newNodes[rootIndex], x: 0, y: 0 };
+                const rootChildren = getChildren(root.id);
+                const leftChildren = [], rightChildren = [];
+                rootChildren.forEach((child, index) => (index % 2 === 0 ? rightChildren : leftChildren).push(child));
+                
+                let leftY = -(leftChildren.reduce((sum, c) => sum + calculateSubtreeHeight(c.id), 0) / 2);
+                leftChildren.forEach(child => {
+                    const h = calculateSubtreeHeight(child.id);
+                    const childY = leftY + (h / 2);
+                    const idx = newNodes.findIndex(n => n.id === child.id);
+                    newNodes[idx] = { ...newNodes[idx], x: -250, y: childY };
+                    layoutNode(child.id, -250, childY, -1);
+                    leftY += h;
+                });
+                let rightY = -(rightChildren.reduce((sum, c) => sum + calculateSubtreeHeight(c.id), 0) / 2);
+                rightChildren.forEach(child => {
+                    const h = calculateSubtreeHeight(child.id);
+                    const childY = rightY + (h / 2);
+                    const idx = newNodes.findIndex(n => n.id === child.id);
+                    newNodes[idx] = { ...newNodes[idx], x: 250, y: childY };
+                    layoutNode(child.id, 250, childY, 1);
+                    rightY += h;
+                });
+                setNodes(newNodes);
+                setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+            };
+
+            const handleStart = (clientX, clientY, nodeId = null, type = 'drag', e) => {
+                if (type === 'resize') { setIsResizing(true); setDragStart({ x: clientX, y: clientY }); return; }
+                if (nodeId) {
+                    const node = nodes.find(n => n.id === nodeId);
+                    setSelectedId(nodeId); setIsDragging(true); setDragStart({ x: clientX, y: clientY });
+                    const snapshot = {};
+                    const isSingleMove = e && (e.ctrlKey || e.metaKey);
+                    setIsMultiMove(!isSingleMove);
+                    if (isSingleMove) { snapshot[nodeId] = { x: node.x, y: node.y }; }
+                    else {
+                        const traverse = (id) => {
+                            const n = nodes.find(x => x.id === id);
+                            if(n) { snapshot[id] = { x: n.x, y: n.y }; nodes.filter(child => child.parentId === id).forEach(c => traverse(c.id)); }
+                        };
+                        traverse(nodeId);
+                    }
+                    setDragSnapshot(snapshot);
+                } else {
+                    setSelectedId(null); setIsPanning(true); setDragStart({ x: clientX, y: clientY }); setInitialOffset({ x: offset.x, y: offset.y });
+                }
+            };
+
+            const handleMove = (clientX, clientY) => {
+                if (isDragging && selectedId && dragSnapshot) {
+                    const dx = (clientX - dragStart.x) / scale;
+                    const dy = (clientY - dragStart.y) / scale;
+                    setNodes(nodes.map(n => dragSnapshot[n.id] ? { ...n, x: dragSnapshot[n.id].x + dx, y: dragSnapshot[n.id].y + dy } : n));
+                } else if (isResizing && selectedId) {
+                    const node = nodes.find(n => n.id === selectedId);
+                    const dx = (clientX - dragStart.x) / scale;
+                    setNodes(nodes.map(n => n.id === selectedId ? { ...n, width: Math.max(50, node.width + dx) } : n));
+                    setDragStart({ x: clientX, y: clientY }); 
+                } else if (isPanning) {
+                    setOffset({ x: initialOffset.x + clientX - dragStart.x, y: initialOffset.y + clientY - dragStart.y });
+                }
+            };
+
+            const handleEnd = () => { setIsDragging(false); setIsPanning(false); setIsResizing(false); setDragSnapshot(null); setPinchDist(null); };
+            const onMouseDown = (e, nodeId, type) => { if (e.button !== 0) return; e.stopPropagation(); handleStart(e.clientX, e.clientY, nodeId, type, e); };
+            const onMouseMove = (e) => { handleMove(e.clientX, e.clientY); };
+            const handleWheel = (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    const newScale = Math.min(Math.max(0.1, scale - e.deltaY * 0.001), 5);
+                    const mouseWorld = screenToWorld(e.clientX, e.clientY);
+                    setScale(newScale);
+                    setOffset({ x: e.clientX - mouseWorld.x * newScale, y: e.clientY - mouseWorld.y * newScale });
+                } else { setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY })); }
+            };
+            const onTouchStart = (e, nodeId, type) => {
+                if (e.touches.length === 2) {
+                    setPinchDist(Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY));
+                    setIsPanning(false); setIsDragging(false);
+                } else if (e.touches.length === 1) handleStart(e.touches[0].clientX, e.touches[0].clientY, nodeId, type, e);
+            };
+            const onTouchMove = (e) => {
+                if (e.touches.length === 2 && pinchDist !== null) {
+                    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    const newScale = Math.min(Math.max(0.1, scale * (dist / pinchDist)), 5);
+                    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    const cw = screenToWorld(cx, cy);
+                    setScale(newScale); setOffset({ x: cx - cw.x * newScale, y: cy - cw.y * newScale }); setPinchDist(dist); 
+                } else if (e.touches.length === 1) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            };
+
+            const getSubtree = (rootId) => {
+                const result = [];
+                const traverse = (id) => { const node = nodes.find(n => n.id === id); if(node) { result.push(node); nodes.filter(n => n.parentId === id).forEach(c => traverse(c.id)); } };
+                traverse(rootId); return result;
+            };
+            const copyNode = () => { if (!selectedId) return; const subtree = getSubtree(selectedId); setClipboard({ rootId: selectedId, data: JSON.parse(JSON.stringify(subtree)) }); };
+            const cutNode = () => { if (!selectedId || selectedId === 'root') return; copyNode(); deleteNode(); };
+            const pasteNode = () => {
+                if (!clipboard || !selectedId) return;
+                const { rootId, data } = clipboard;
+                const targetParent = nodes.find(n => n.id === selectedId); if (!targetParent) return;
+                const root = nodes.find(n => !n.parentId);
+                let targetDir = targetParent.id !== root.id ? (targetParent.x >= root.x ? 1 : -1) : 1;
+                const clipboardRoot = data.find(n => n.id === rootId);
+                const descendants = data.filter(n => n.id !== rootId);
+                let sourceDir = descendants.length > 0 ? ((descendants.reduce((sum, n) => sum + (n.x - clipboardRoot.x), 0) / descendants.length) >= 0 ? 1 : -1) : targetDir;
+                const shouldFlip = targetDir !== sourceDir;
+                let siblings = nodes.filter(n => n.parentId === selectedId);
+                if (targetParent.parentId === null) siblings = siblings.filter(n => (n.x < targetParent.x ? -1 : 1) === targetDir);
+                siblings.sort((a, b) => a.y - b.y);
+                let newRootY = targetParent.y;
+                if (siblings.length > 0) {
+                    const lastSibling = siblings[siblings.length - 1];
+                    const subtreeMaxY = getSubtreeMaxY(lastSibling.id);
+                    newRootY = (subtreeMaxY !== null ? subtreeMaxY : (lastSibling.y + lastSibling.height)) + 20;
+                }
+                const newRootX = targetParent.x + (targetParent.width + 50) * targetDir;
+                const idMap = {}; data.forEach(n => idMap[n.id] = generateId());
+                const newNodes = data.map(node => {
+                    const isRoot = node.id === rootId;
+                    let relX = node.x - clipboardRoot.x; let relY = node.y - clipboardRoot.y;
+                    if (shouldFlip) relX = -relX;
+                    return { ...node, id: idMap[node.id], parentId: isRoot ? selectedId : idMap[node.parentId], x: newRootX + relX, y: newRootY + relY };
+                });
+                setNodes([...nodes, ...newNodes]);
+            };
+
+            const addNode = () => {
+                if (!selectedId) return;
+                const parent = nodes.find(n => n.id === selectedId); if (!parent) return;
+                const newNodeId = generateId();
+                const root = nodes.find(n => !n.parentId);
+                let direction = parent.parentId === null ? (Math.random() > 0.5 ? 1 : -1) : (parent.x < root.x ? -1 : 1);
+                let siblings = nodes.filter(n => n.parentId === selectedId);
+                if (parent.parentId === null) siblings = siblings.filter(n => (n.x < parent.x ? -1 : 1) === direction);
+                let newY = parent.y;
+                if (siblings.length > 0) {
+                    siblings.sort((a, b) => a.y - b.y);
+                    const lastSibling = siblings[siblings.length - 1];
+                    const subtreeMaxY = getSubtreeMaxY(lastSibling.id);
+                    newY = (subtreeMaxY !== null ? subtreeMaxY : (lastSibling.y + lastSibling.height)) + 20;
+                }
+                setNodes([...nodes, { id: newNodeId, text: '', x: parent.x + (parent.width + 50) * direction, y: newY, width: 120, height: 40, parentId: selectedId, color: '#64748b' }]);
+                setSelectedId(newNodeId); setTimeout(() => setEditingId(newNodeId), 100);
+            };
+
+            const deleteNode = () => {
+                if (!selectedId || selectedId === 'root') return;
+                const idsToDelete = new Set([selectedId]);
+                let changed = true;
+                while(changed) { changed = false; nodes.forEach(n => { if (n.parentId && idsToDelete.has(n.parentId) && !idsToDelete.has(n.id)) { idsToDelete.add(n.id); changed = true; } }); }
+                setNodes(nodes.filter(n => !idsToDelete.has(n.id))); setSelectedId(null);
+            };
+
+            const updateNodeText = (id, text) => setNodes(nodes.map(n => n.id === id ? { ...n, text } : n));
+            const handleEditBlur = (id, text) => { setEditingId(null); if (!text || text.trim() === '') updateNodeText(id, '새로운 토픽'); };
+            
+            const exportMap = () => {
+                const data = JSON.stringify(nodes, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'mindmap.json'; a.click(); URL.revokeObjectURL(url);
+            };
+
+            const parseOpml = (xmlString) => {
+                const parser = new DOMParser(); const xmlDoc = parser.parseFromString(xmlString, "text/xml"); const opmlNodes = [];
+                const parseOutline = (xmlNode, parentId, level, yOffset) => {
+                    const text = xmlNode.getAttribute('text') || 'No Text';
+                    const id = generateId();
+                    let x = level * 200, y = yOffset; if (level === 0) { x = 0; y = 0; }
+                    opmlNodes.push({ id: level === 0 ? 'root' : id, text: text, x: x, y: y, width: 120, height: 40, parentId: parentId, color: level === 0 ? '#3b82f6' : '#64748b' });
+                    const children = xmlNode.children; let childYOffset = y - ((children.length * 60) / 2);
+                    for (let i = 0; i < children.length; i++) { if (children[i].tagName === 'outline') { parseOutline(children[i], level === 0 ? 'root' : id, level + 1, childYOffset); childYOffset += 60; } }
+                };
+                const body = xmlDoc.getElementsByTagName('body')[0]; if (body && body.children.length > 0) parseOutline(body.children[0], null, 0, 0);
+                return opmlNodes;
+            };
+            
+            const parseSmm = (jsonString) => {
+                try { const data = JSON.parse(jsonString); return data.nodes || null; } catch (e) { return null; }
+            };
+
+            const importMap = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const content = event.target.result;
+                        let loadedNodes = [];
+                        if (file.name.endsWith('.opml')) loadedNodes = parseOpml(content);
+                        else if (file.name.endsWith('.smm') || file.name.endsWith('.json')) loadedNodes = JSON.parse(content); // Support JSON import
+                        
+                        if (loadedNodes && loadedNodes.length > 0) { setNodes(loadedNodes); setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setScale(1); }
+                        else alert('가져올 데이터가 없습니다.');
+                    } catch (err) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (editingId) return;
+                    if (e.key === 'Tab') { e.preventDefault(); addNode(); }
+                    else if (e.key === 'Delete' || e.key === 'Backspace') deleteNode();
+                    else if ((e.ctrlKey || e.metaKey) && e.key === 'c') copyNode();
+                    else if ((e.ctrlKey || e.metaKey) && e.key === 'x') cutNode();
+                    else if ((e.ctrlKey || e.metaKey) && e.key === 'v') pasteNode();
+                };
+                window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [selectedId, nodes, editingId, clipboard]);
+
+            const renderConnections = () => nodes.map(node => {
+                if (!node.parentId) return null;
+                const parent = nodes.find(n => n.id === node.parentId); if (!parent) return null;
+                const startX = parent.x + (node.x > parent.x ? parent.width : 0);
+                const startY = parent.y + parent.height / 2;
+                const endX = node.x + (node.x > parent.x ? 0 : node.width);
+                const endY = node.y + node.height / 2;
+                const cp1x = startX + (endX - startX) / 2;
+                return <path key={`edge-${node.id}`} d={`M ${startX} ${startY} C ${cp1x} ${startY}, ${cp1x} ${endY}, ${endX} ${endY}`} stroke="#94a3b8" strokeWidth="2" fill="none" />;
+            });
+
+            return (
+                <div className="w-full h-screen flex flex-col font-sans touch-none select-none">
+                    <div className="h-14 bg-white border-b border-slate-200 flex items-center px-4 justify-between shadow-sm z-10 shrink-0">
+                        <div className="flex items-center space-x-2">
+                            <div className="bg-indigo-600 p-1.5 rounded-lg text-white mr-2"><Layout size={20} /></div>
+                            <h1 className="font-bold text-lg text-slate-700 hidden md:block">MindCanvas</h1>
+                            {!user && <button onClick={() => window.SBL_MindMap?.login()} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200">로그인 필요</button>}
+                        </div>
+
+                        <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                            <button onClick={addNode} disabled={!selectedId} className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${selectedId ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><Plus size={18} /><span className="hidden sm:inline">자식 노드</span></button>
+                            <button onClick={deleteNode} disabled={!selectedId || selectedId === 'root'} className="p-2 text-red-500 rounded-md disabled:text-slate-300"><Trash2 size={20} /></button>
+                            <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                            <button onClick={cutNode} disabled={!selectedId || selectedId === 'root'} className="p-2 text-slate-700 hover:bg-white rounded-md disabled:text-slate-300"><Scissors size={20} /></button>
+                            <button onClick={copyNode} disabled={!selectedId} className="p-2 text-slate-700 hover:bg-white rounded-md disabled:text-slate-300"><Copy size={20} /></button>
+                            <button onClick={pasteNode} disabled={!clipboard || !selectedId} className="p-2 text-slate-700 hover:bg-white rounded-md disabled:text-slate-300"><Clipboard size={20} /></button>
+                            <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                            <button onClick={autoLayout} className="p-2 text-slate-700 hover:bg-white rounded-md"><AlignCenter size={20} /></button>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <div className="hidden sm:flex items-center bg-slate-100 rounded-lg p-1">
+                                <button onClick={() => setScale(s => Math.max(0.1, s - 0.1))} className="p-1.5 hover:bg-white rounded-md text-slate-600"><Minus size={16} /></button>
+                                <span className="w-10 text-center text-xs font-medium text-slate-600">{Math.round(scale * 100)}%</span>
+                                <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-1.5 hover:bg-white rounded-md text-slate-600"><Plus size={16} /></button>
+                            </div>
+                            <button onClick={exportMap} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Download size={20} /></button>
+                            <label className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"><Upload size={20} /><input type="file" accept=".json, .opml, .smm" className="hidden" ref={fileInputRef} onChange={importMap} /></label>
+                            
+                            {/* Home Button */}
+                            <button onClick={() => window.location.href = '../index.html'} className="p-2 text-white bg-slate-700 hover:bg-slate-800 rounded-lg ml-2" title="홈으로"><Home size={20} /></button>
+                        </div>
+                    </div>
+
+                    <div ref={containerRef} className="flex-1 relative overflow-hidden bg-slate-50 touch-none" onWheel={handleWheel} onMouseDown={(e) => onMouseDown(e, null)} onMouseMove={onMouseMove} onMouseUp={handleEnd} onMouseLeave={handleEnd} onTouchStart={(e) => onTouchStart(e, null)} onTouchMove={onTouchMove} onTouchEnd={handleEnd} style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: `${20 * scale}px ${20 * scale}px`, backgroundPosition: `${offset.x}px ${offset.y}px` }}>
+                        <div className="absolute origin-top-left will-change-transform" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
+                            <svg className="absolute top-0 left-0 overflow-visible pointer-events-none" style={{ width: 1, height: 1 }}>{renderConnections()}</svg>
+                            {nodes.map(node => (
+                                <div key={node.id} id={`node-${node.id}`} className={`absolute group flex flex-col items-center justify-center transition-shadow duration-200 touch-none ${selectedId === node.id ? 'ring-2 ring-indigo-500 ring-offset-2 z-10 shadow-lg' : 'shadow-md'}`} style={{ left: node.x, top: node.y, width: node.width, minHeight: '40px', height: 'auto', backgroundColor: node.parentId ? '#ffffff' : '#f0f9ff', borderColor: node.color, borderWidth: node.parentId === null ? 3 : 0, borderLeftWidth: 4, borderRadius: '8px' }} onMouseDown={(e) => onMouseDown(e, node.id)} onTouchStart={(e) => { e.stopPropagation(); onTouchStart(e, node.id); }} onDoubleClick={() => setEditingId(node.id)}>
+                                    <div className="w-full h-full px-3 py-2 flex items-center justify-center pointer-events-none">
+                                        {editingId === node.id ? (
+                                            <textarea autoFocus placeholder="새로운 토픽" className="w-full text-center bg-transparent outline-none border-b border-indigo-300 pointer-events-auto placeholder:text-slate-300 resize-none overflow-hidden" value={node.text} ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; updateNodeText(node.id, e.target.value); }} onBlur={(e) => handleEditBlur(node.id, e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditBlur(node.id, e.target.value); } }} />
+                                        ) : (
+                                            <span className={`text-center w-full select-none break-words whitespace-pre-wrap ${node.parentId === null ? 'font-bold text-lg' : 'text-sm font-medium'}`}>{node.text}</span>
+                                        )}
+                                    </div>
+                                    {selectedId === node.id && ( <div className="absolute bottom-0 right-0 w-6 h-full flex items-center justify-center cursor-ew-resize touch-none p-1 pointer-events-auto hover:bg-black/5 rounded-r-lg" onMouseDown={(e) => onMouseDown(e, node.id, 'resize')} onTouchStart={(e) => { e.stopPropagation(); onTouchStart(e, node.id, 'resize'); }} title="너비 조절"><div className="w-1 h-4 bg-slate-300 rounded-full"></div></div> )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="absolute bottom-4 left-4 right-4 sm:right-auto bg-white/90 backdrop-blur p-3 rounded-lg shadow-md text-xs text-slate-500 border border-slate-200 pointer-events-none select-none text-center sm:text-left">
+                        <p className="hidden sm:block">🖱️ 드래그: 이동 / 휠: 줌 / 더블클릭: 편집 / Ctrl+드래그: 단일 이동</p>
+                        <p className="sm:hidden">👆 터치: 이동 / 🤏 핀치: 줌 / ✌️ 더블탭: 편집</p>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
