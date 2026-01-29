@@ -38,7 +38,6 @@
             display: flex; align-items: center; justify-content: center;
         }
         
-        /* 사용자 프로필 영역 */
         .user-info { display: flex; align-items: center; gap: 8px; margin-right: 10px; }
         .user-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #ddd; }
         .login-btn { background: #1a73e8; color: white; padding: 6px 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; }
@@ -55,18 +54,12 @@
         .view-content { flex: 1; overflow-y: auto; display: none; padding: 10px 0 20px 0; }
         .view-content.active { display: block; }
 
-        /* === 만다라트 스타일 (음영 문제 및 정렬 해결) === */
+        /* === 만다라트 스타일 === */
         .mandalart-container { 
-            height: 100%; 
-            display: none; /* 기본적으로 숨김 (음영 버그 해결 핵심) */
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center;
-            overflow: hidden; 
+            height: 100%; display: none; flex-direction: column;
+            align-items: center; justify-content: center; overflow: hidden; 
         }
-        .mandalart-container.active {
-            display: flex; /* 활성화될 때만 flex로 변경 */
-        }
+        .mandalart-container.active { display: flex; }
         
         .mandalart-grid { 
             display: grid; 
@@ -75,10 +68,8 @@
             width: 100%;
             max-width: calc(100vh - 130px); 
             aspect-ratio: 1 / 1; 
-            gap: 4px; 
-            padding: 4px; 
-            background-color: #333; 
-            border-radius: 4px;
+            gap: 4px; padding: 4px; 
+            background-color: #333; border-radius: 4px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
@@ -91,34 +82,45 @@
         }
         .sub-grid-center { border: 3px solid #000; z-index: 10; }
 
-        /* 텍스트 정중앙 정렬 (Flex Box 사용) */
-        .grid-cell { 
-            width: 100%; height: 100%; 
-            padding: 4px; border: 1px solid #eee; 
-            font-size: 0.8rem; 
-            display: flex; 
-            align-items: center; /* 세로 중앙 */
-            justify-content: center; /* 가로 중앙 */
-            text-align: center; /* 텍스트 자체 중앙 */
-            word-break: keep-all; line-height: 1.3; font-weight: 600;
-            cursor: text; outline: none; overflow: hidden;
+        /* 셀 래퍼: 정중앙 정렬을 위한 Flex 컨테이너 */
+        .cell-wrapper {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            padding: 2px; border: 1px solid #eee;
         }
-        .grid-cell:focus { background-color: rgba(26, 115, 232, 0.1); }
-        .grid-cell:empty::before { content: attr(placeholder); color: #aaa; font-weight: 400; }
+
+        /* 텍스트 입력창: 투명하고 꽉 차게 */
+        .grid-input { 
+            width: 100%; 
+            background: transparent; border: none; outline: none; resize: none;
+            text-align: center; font-size: 0.8rem; font-weight: 600;
+            font-family: inherit; line-height: 1.3;
+            overflow: hidden;
+            /* 높이를 내용물에 맞추거나 100%로 하되, Flex 중앙 정렬 효과를 위해 */
+            height: 100%; 
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        /* placeholder 색상 */
+        .grid-input::placeholder { color: #aaa; font-weight: 400; }
+        .grid-input:focus { background-color: rgba(26, 115, 232, 0.1); }
 
         /* 색상 테마 */
-        .sub-grid-0 { background-color: #ffebee; } .sub-grid-0 .grid-cell { background-color: #ffebee; }
-        .sub-grid-1 { background-color: #fff3e0; } .sub-grid-1 .grid-cell { background-color: #fff3e0; }
-        .sub-grid-2 { background-color: #fffde7; } .sub-grid-2 .grid-cell { background-color: #fffde7; }
-        .sub-grid-3 { background-color: #f3e5f5; } .sub-grid-3 .grid-cell { background-color: #f3e5f5; }
-        .sub-grid-center { background-color: #eceff1; } .sub-grid-center .grid-cell { background-color: #eceff1; }
-        .sub-grid-5 { background-color: #e3f2fd; } .sub-grid-5 .grid-cell { background-color: #e3f2fd; }
-        .sub-grid-6 { background-color: #e8f5e9; } .sub-grid-6 .grid-cell { background-color: #e8f5e9; }
-        .sub-grid-7 { background-color: #e0f2f1; } .sub-grid-7 .grid-cell { background-color: #e0f2f1; }
-        .sub-grid-8 { background-color: #efebe9; } .sub-grid-8 .grid-cell { background-color: #efebe9; }
+        .sub-grid-0, .sub-grid-0 .cell-wrapper, .sub-grid-0 textarea { background-color: #ffebee; }
+        .sub-grid-1, .sub-grid-1 .cell-wrapper, .sub-grid-1 textarea { background-color: #fff3e0; }
+        .sub-grid-2, .sub-grid-2 .cell-wrapper, .sub-grid-2 textarea { background-color: #fffde7; }
+        .sub-grid-3, .sub-grid-3 .cell-wrapper, .sub-grid-3 textarea { background-color: #f3e5f5; }
+        .sub-grid-center, .sub-grid-center .cell-wrapper, .sub-grid-center textarea { background-color: #eceff1; }
+        .sub-grid-5, .sub-grid-5 .cell-wrapper, .sub-grid-5 textarea { background-color: #e3f2fd; }
+        .sub-grid-6, .sub-grid-6 .cell-wrapper, .sub-grid-6 textarea { background-color: #e8f5e9; }
+        .sub-grid-7, .sub-grid-7 .cell-wrapper, .sub-grid-7 textarea { background-color: #e0f2f1; }
+        .sub-grid-8, .sub-grid-8 .cell-wrapper, .sub-grid-8 textarea { background-color: #efebe9; }
 
-        .main-goal { background-color: #ffeb3b !important; font-weight: 800; font-size: 1.1rem; border: 2px solid #fbc02d; }
-        .sub-goal { background-color: #fff !important; font-weight: 700; border: 1px solid #999; }
+        .main-goal, .main-goal .cell-wrapper, .main-goal textarea { background-color: #ffeb3b !important; font-weight: 800; font-size: 1.1rem; }
+        .sub-goal, .sub-goal .cell-wrapper, .sub-goal textarea { background-color: #fff !important; font-weight: 700; }
+        
+        /* 중앙 셀 테두리 강조 */
+        .main-goal .cell-wrapper { border: 2px solid #fbc02d; }
+        .sub-goal .cell-wrapper { border: 1px solid #999; }
 
         /* === 빅스톤 뷰 === */
         .year-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
@@ -197,7 +199,6 @@
     </div>
 
     <script type="module">
-        // 파이어베이스 설정
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
@@ -220,6 +221,7 @@
         window.currentYear = 2026;
         window.currentMonth = null;
         let currentUserId = null;
+        
         let allBigstoneData = {}; 
         let allMandalartData = {}; 
         let availableYears = [2026];
@@ -262,7 +264,7 @@
             });
         }
 
-        // [핵심] 통합 저장 함수 (이걸로 모든 저장 로직 통일)
+        // 통합 저장 함수
         function saveToCloud() {
             if(!currentUserId) return;
             set(ref(db, `users/${currentUserId}/bigstone`), allBigstoneData);
@@ -383,16 +385,21 @@
             });
         }
 
+        // === 만다라트 (textarea로 변경하여 한글 입력 문제 해결) ===
         window.renderMandalart = function() {
             const grid = document.getElementById('mandalart-grid');
             if(grid.children.length === 0) createMandalartGrid(grid);
             const data = allMandalartData[window.currentYear] || {};
-            document.querySelectorAll('.grid-cell').forEach(cell => {
-                cell.textContent = data[cell.id] || ''; 
-                const gId = parseInt(cell.dataset.gridId), cId = parseInt(cell.dataset.cellId);
+            
+            // 모든 textarea에 값 채우기
+            document.querySelectorAll('.grid-input').forEach(input => {
+                input.value = data[input.id] || '';
+                
+                // 외곽 그리드의 중앙 셀(readOnly) 동기화
+                const gId = parseInt(input.dataset.gridId), cId = parseInt(input.dataset.cellId);
                 if(gId === 4 && cId !== 4) {
                     const target = document.getElementById(`mcell-${cId}-4`);
-                    if(target) target.textContent = cell.textContent;
+                    if(target) target.value = input.value;
                 }
             });
         }
@@ -403,27 +410,37 @@
                 const subGrid = document.createElement('div');
                 const isCenter = (i === 4);
                 subGrid.className = `sub-grid sub-grid-${i} ${isCenter ? 'sub-grid-center' : ''}`;
+                
                 for(let j=0; j<9; j++) {
-                    const cell = document.createElement('div'); 
-                    cell.className = 'grid-cell';
-                    cell.contentEditable = true; 
+                    const cellWrapper = document.createElement('div');
+                    cellWrapper.className = 'cell-wrapper';
+                    
+                    const cell = document.createElement('textarea');
+                    cell.className = 'grid-input';
                     cell.id = `mcell-${i}-${j}`;
                     cell.dataset.gridId = i; cell.dataset.cellId = j;
-                    if(i===4 && j===4) { cell.classList.add('main-goal'); cell.setAttribute('placeholder', '핵심\n목표'); }
-                    else if(i===4) { cell.classList.add('sub-goal'); cell.setAttribute('placeholder', '세부\n목표'); }
-                    else if(j===4) { cell.classList.add('sub-goal'); cell.contentEditable = false; cell.setAttribute('placeholder', '세부\n목표'); } 
-                    else { cell.setAttribute('placeholder', '계획'); }
+                    cell.spellcheck = false;
+
+                    if(i===4 && j===4) { cellWrapper.classList.add('main-goal'); cell.placeholder = '핵심\n목표'; }
+                    else if(i===4) { cellWrapper.classList.add('sub-goal'); cell.placeholder = '세부\n목표'; }
+                    else if(j===4) { cellWrapper.classList.add('sub-goal'); cell.readOnly = true; cell.placeholder = '세부\n목표'; } 
+                    else { cell.placeholder = '계획'; }
+                    
                     cell.addEventListener('input', (e) => {
-                        const val = e.target.textContent;
+                        const val = e.target.value;
                         if(!allMandalartData[window.currentYear]) allMandalartData[window.currentYear] = {};
                         allMandalartData[window.currentYear][e.target.id] = val;
+                        
+                        // 중앙 -> 외곽 연동
                         if(i===4 && j!==4) {
                             const t = document.getElementById(`mcell-${j}-4`);
-                            if(t) t.textContent = val;
+                            if(t) t.value = val;
                         }
                         saveToCloud();
                     });
-                    subGrid.appendChild(cell);
+                    
+                    cellWrapper.appendChild(cell);
+                    subGrid.appendChild(cellWrapper);
                 }
                 grid.appendChild(subGrid);
             }
