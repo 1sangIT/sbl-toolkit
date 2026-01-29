@@ -16,7 +16,7 @@
       color: var(--text); background: linear-gradient(180deg, var(--bg), var(--bg2));
       min-height: 100vh;
     }
-    .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 18px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px; }
     header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r);
@@ -35,8 +35,10 @@
       padding: 16px 20px; border: 1px solid var(--line); border-radius: var(--r);
       background: rgba(255,255,255,.02);
     }
-    /* 4개 배치를 위해 2열 그리드로 변경 */
-    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; }
+    
+    /* 카드 5개 배치를 위해 3열 그리드로 변경 (반응형 대응) */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    
     .card {
       border: 1px solid var(--line); border-radius: var(--r);
       background: rgba(255,255,255,.05); padding: 28px; opacity: 0.4; filter: grayscale(1);
@@ -51,7 +53,10 @@
     }
     .action.active { background: var(--accent); color: #fff; pointer-events: auto; }
     footer { margin-top: 60px; text-align: center; font-size: 12px; opacity: 0.4; }
-    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    
+    /* 모바일 반응형: 화면이 좁아지면 2열 -> 1열로 변경 */
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -95,6 +100,11 @@
         <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">연간 목표 & 만다라트</p>
         <a class="action" id="a4" href="./bitstone/">실행하기</a>
       </div>
+      <div class="card" id="c5">
+        <h2>🧠 마인드맵</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">아이디어 시각화 도구</p>
+        <a class="action" id="a5" href="./mindmap/">실행하기</a>
+      </div>
     </section>
 
     <footer>&copy; Second Brain Lab. 업무 전용 공간입니다.</footer>
@@ -124,9 +134,10 @@
 
     onAuthStateChanged(auth, (user) => {
       const isAllowed = user && user.email.toLowerCase() === ALLOWED;
-      // c4, a4 추가됨
-      const ids = ["c1","c2","c3","c4"];
-      const btnIds = ["a1","a2","a3","a4"];
+      
+      // 카드 및 버튼 ID 목록 업데이트 (c5, a5 추가)
+      const ids = ["c1", "c2", "c3", "c4", "c5"];
+      const btnIds = ["a1", "a2", "a3", "a4", "a5"];
 
       if (isAllowed) {
         document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
