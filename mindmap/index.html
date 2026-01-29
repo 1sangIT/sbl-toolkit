@@ -44,27 +44,26 @@
         const auth = getAuth(app);
         const ALLOWED_EMAIL = "eundang@gmail.com";
 
-        // Global Service Object for React
         window.SBL_MindMap = {
             login: () => signInWithPopup(auth, new GoogleAuthProvider()),
             
-            // 데이터 저장 (Debounce 처리 등은 React 쪽에서 제어 권장하지만 여기서는 단순 저장)
             save: (nodes) => {
                 const user = auth.currentUser;
                 if (user && user.email === ALLOWED_EMAIL) {
-                    set(ref(db, `users/${user.uid}/mindmap`), nodes);
+                    return set(ref(db, `users/${user.uid}/mindmap`), nodes);
                 }
+                return Promise.resolve();
             },
 
-            // 초기화 및 데이터 리스닝
             init: (onLoad, onAuthUpdate) => {
                 onAuthStateChanged(auth, (user) => {
                     if (user && user.email === ALLOWED_EMAIL) {
                         onAuthUpdate(user);
-                        // 데이터 로드 (최초 1회 및 변경 감지)
+                        // 데이터 로드 리스너
                         onValue(ref(db, `users/${user.uid}/mindmap`), (snapshot) => {
                             const data = snapshot.val();
-                            if (data) onLoad(data);
+                            // [수정 핵심] 데이터가 없어도(null) 로드 완료 신호를 보냄
+                            onLoad(data || null);
                         });
                     } else {
                         onAuthUpdate(null);
@@ -73,13 +72,10 @@
                 });
             }
         };
-        
-        // React 로드 알림
-        window.dispatchEvent(new Event('SBL_READY'));
     </script>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect, useLayoutEffect, useCallback } = React;
+        const { useState, useRef, useEffect, useLayoutEffect } = React;
 
         // --- Icons ---
         const IconBase = ({ children, size = 24, className = "" }) => (
@@ -96,6 +92,7 @@
         const Scissors = (props) => <IconBase {...props}><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></IconBase>;
         const Clipboard = (props) => <IconBase {...props}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></IconBase>;
         const Home = (props) => <IconBase {...props}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></IconBase>;
+        const Save = (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconBase>;
 
         const INITIAL_NODES = [
             { id: 'root', text: '중심 토픽', x: 0, y: 0, width: 160, height: 60, parentId: null, color: '#3b82f6' },
@@ -109,7 +106,6 @@
             const [scale, setScale] = useState(1);
             const [offset, setOffset] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
             const [selectedId, setSelectedId] = useState(null);
-            
             const [isDragging, setIsDragging] = useState(false);
             const [isPanning, setIsPanning] = useState(false);
             const [isResizing, setIsResizing] = useState(false);
@@ -118,31 +114,31 @@
             const [initialOffset, setInitialOffset] = useState({ x: 0, y: 0 });
             const [editingId, setEditingId] = useState(null);
             const [clipboard, setClipboard] = useState(null); 
-            const [isMultiMove, setIsMultiMove] = useState(true);
             const [pinchDist, setPinchDist] = useState(null);
             
-            // Firebase Auth State
+            // 저장 상태 관리
             const [user, setUser] = useState(null);
-            const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+            const [isLoaded, setIsLoaded] = useState(false); // 데이터 로드 완료 여부
+            const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved, error
 
             const containerRef = useRef(null);
             const fileInputRef = useRef(null);
             const saveTimeoutRef = useRef(null);
 
-            // --- Firebase Init ---
+            // --- Firebase 연동 ---
             useEffect(() => {
                 const checkFirebase = () => {
                     if (window.SBL_MindMap) {
                         window.SBL_MindMap.init(
                             (data) => {
-                                // 외부(파이어베이스)에서 데이터가 왔을 때
-                                if (data && Array.isArray(data)) {
+                                // 데이터가 있으면 덮어씌우고, 없으면 초기값 유지 (하지만 로드 완료로 표시)
+                                if (data) {
                                     setNodes(data);
                                 }
+                                setIsLoaded(true); // [중요] 로드 완료 플래그
                             },
                             (userInfo) => {
                                 setUser(userInfo);
-                                setIsFirebaseReady(true);
                             }
                         );
                     } else {
@@ -152,300 +148,130 @@
                 checkFirebase();
             }, []);
 
-            // --- Auto Save (Debounce) ---
+            // --- 자동 저장 로직 (로드 완료된 이후에만 작동) ---
             useEffect(() => {
-                if (!isFirebaseReady || !user) return;
+                if (!isLoaded || !user) return; // 로딩 전에는 저장 금지 (초기화 방지)
 
-                // 변경 발생 시 1초 뒤 저장 (너무 잦은 저장 방지)
+                setSaveStatus('saving');
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                 
                 saveTimeoutRef.current = setTimeout(() => {
                     if (window.SBL_MindMap) {
-                        window.SBL_MindMap.save(nodes);
+                        window.SBL_MindMap.save(nodes).then(() => {
+                            setSaveStatus('saved');
+                            setTimeout(() => setSaveStatus('idle'), 2000);
+                        });
                     }
-                }, 1000);
+                }, 1000); // 1초 디바운스
 
                 return () => clearTimeout(saveTimeoutRef.current);
-            }, [nodes, isFirebaseReady, user]);
+            }, [nodes, isLoaded, user]);
 
-
-            // --- Utilities & Handlers (기존 로직 유지) ---
+            // --- 유틸리티 (기존 유지) ---
             const screenToWorld = (sx, sy) => ({ x: (sx - offset.x) / scale, y: (sy - offset.y) / scale });
             const generateId = () => Math.random().toString(36).substr(2, 9);
             const getSubtreeMaxY = (nodeId) => {
                 let maxY = -Infinity;
-                const traverse = (id) => {
-                    const node = nodes.find(n => n.id === id);
-                    if(!node) return;
-                    const bottom = node.y + node.height;
-                    if(bottom > maxY) maxY = bottom;
-                    nodes.filter(n => n.parentId === id).forEach(c => traverse(c.id));
-                };
-                traverse(nodeId);
-                return maxY === -Infinity ? null : maxY;
+                const traverse = (id) => { const node = nodes.find(n => n.id === id); if(!node) return; const bottom = node.y + node.height; if(bottom > maxY) maxY = bottom; nodes.filter(n => n.parentId === id).forEach(c => traverse(c.id)); };
+                traverse(nodeId); return maxY === -Infinity ? null : maxY;
             };
 
             useLayoutEffect(() => {
                 const newNodes = nodes.map(node => {
                     const el = document.getElementById(`node-${node.id}`);
-                    if (el) {
-                        const actualHeight = el.offsetHeight;
-                        if (Math.abs(actualHeight - node.height) > 0) return { ...node, height: actualHeight };
-                    }
+                    if (el && Math.abs(el.offsetHeight - node.height) > 0) return { ...node, height: el.offsetHeight };
                     return node;
                 });
                 if (newNodes.some((n, i) => n.height !== nodes[i].height)) setNodes(newNodes);
             }, [nodes]); 
 
             const autoLayout = () => {
-                const root = nodes.find(n => !n.parentId);
-                if (!root) return;
+                const root = nodes.find(n => !n.parentId); if (!root) return;
                 const newNodes = [...nodes];
                 const getChildren = (id) => nodes.filter(n => n.parentId === id);
-                const calculateSubtreeHeight = (nodeId) => {
-                    const children = getChildren(nodeId);
-                    if (children.length === 0) return 60; 
-                    return children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
-                };
+                const calculateSubtreeHeight = (nodeId) => { const children = getChildren(nodeId); if (children.length === 0) return 60; return children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0); };
                 const layoutNode = (nodeId, x, y, direction) => { 
-                    const children = getChildren(nodeId);
-                    let currentY = y - (calculateSubtreeHeight(nodeId) / 2);
-                    children.forEach(child => {
-                        const childHeight = calculateSubtreeHeight(child.id);
-                        const childY = currentY + (childHeight / 2);
-                        const childIndex = newNodes.findIndex(n => n.id === child.id);
-                        if (childIndex !== -1) {
-                            newNodes[childIndex] = { ...newNodes[childIndex], x: x + (direction * 200), y: childY };
-                            layoutNode(child.id, x + (direction * 200), childY, direction);
-                        }
-                        currentY += childHeight;
-                    });
+                    const children = getChildren(nodeId); let currentY = y - (calculateSubtreeHeight(nodeId) / 2);
+                    children.forEach(child => { const h = calculateSubtreeHeight(child.id); const childY = currentY + (h / 2); const idx = newNodes.findIndex(n => n.id === child.id); if (idx !== -1) { newNodes[idx] = { ...newNodes[idx], x: x + (direction * 200), y: childY }; layoutNode(child.id, x + (direction * 200), childY, direction); } currentY += h; });
                 };
-                const rootIndex = newNodes.findIndex(n => n.id === root.id);
-                newNodes[rootIndex] = { ...newNodes[rootIndex], x: 0, y: 0 };
-                const rootChildren = getChildren(root.id);
-                const leftChildren = [], rightChildren = [];
-                rootChildren.forEach((child, index) => (index % 2 === 0 ? rightChildren : leftChildren).push(child));
-                
-                let leftY = -(leftChildren.reduce((sum, c) => sum + calculateSubtreeHeight(c.id), 0) / 2);
-                leftChildren.forEach(child => {
-                    const h = calculateSubtreeHeight(child.id);
-                    const childY = leftY + (h / 2);
-                    const idx = newNodes.findIndex(n => n.id === child.id);
-                    newNodes[idx] = { ...newNodes[idx], x: -250, y: childY };
-                    layoutNode(child.id, -250, childY, -1);
-                    leftY += h;
-                });
-                let rightY = -(rightChildren.reduce((sum, c) => sum + calculateSubtreeHeight(c.id), 0) / 2);
-                rightChildren.forEach(child => {
-                    const h = calculateSubtreeHeight(child.id);
-                    const childY = rightY + (h / 2);
-                    const idx = newNodes.findIndex(n => n.id === child.id);
-                    newNodes[idx] = { ...newNodes[idx], x: 250, y: childY };
-                    layoutNode(child.id, 250, childY, 1);
-                    rightY += h;
-                });
-                setNodes(newNodes);
-                setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                const rootIndex = newNodes.findIndex(n => n.id === root.id); newNodes[rootIndex] = { ...newNodes[rootIndex], x: 0, y: 0 };
+                const rootChildren = getChildren(root.id); const left = [], right = []; rootChildren.forEach((c, i) => (i % 2 === 0 ? right : left).push(c));
+                let ly = -(left.reduce((s, c) => s + calculateSubtreeHeight(c.id), 0) / 2); left.forEach(c => { const h = calculateSubtreeHeight(c.id); const cy = ly + (h/2); const idx = newNodes.findIndex(n => n.id === c.id); newNodes[idx] = { ...newNodes[idx], x: -250, y: cy }; layoutNode(c.id, -250, cy, -1); ly += h; });
+                let ry = -(right.reduce((s, c) => s + calculateSubtreeHeight(c.id), 0) / 2); right.forEach(c => { const h = calculateSubtreeHeight(c.id); const cy = ry + (h/2); const idx = newNodes.findIndex(n => n.id === c.id); newNodes[idx] = { ...newNodes[idx], x: 250, y: cy }; layoutNode(c.id, 250, cy, 1); ry += h; });
+                setNodes(newNodes); setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
             };
 
             const handleStart = (clientX, clientY, nodeId = null, type = 'drag', e) => {
                 if (type === 'resize') { setIsResizing(true); setDragStart({ x: clientX, y: clientY }); return; }
                 if (nodeId) {
-                    const node = nodes.find(n => n.id === nodeId);
-                    setSelectedId(nodeId); setIsDragging(true); setDragStart({ x: clientX, y: clientY });
-                    const snapshot = {};
-                    const isSingleMove = e && (e.ctrlKey || e.metaKey);
-                    setIsMultiMove(!isSingleMove);
-                    if (isSingleMove) { snapshot[nodeId] = { x: node.x, y: node.y }; }
-                    else {
-                        const traverse = (id) => {
-                            const n = nodes.find(x => x.id === id);
-                            if(n) { snapshot[id] = { x: n.x, y: n.y }; nodes.filter(child => child.parentId === id).forEach(c => traverse(c.id)); }
-                        };
-                        traverse(nodeId);
-                    }
+                    const node = nodes.find(n => n.id === nodeId); setSelectedId(nodeId); setIsDragging(true); setDragStart({ x: clientX, y: clientY });
+                    const snapshot = {}; const isSingle = e && (e.ctrlKey || e.metaKey);
+                    if (isSingle) { snapshot[nodeId] = { x: node.x, y: node.y }; }
+                    else { const traverse = (id) => { const n = nodes.find(x => x.id === id); if(n) { snapshot[id] = { x: n.x, y: n.y }; nodes.filter(c => c.parentId === id).forEach(c => traverse(c.id)); } }; traverse(nodeId); }
                     setDragSnapshot(snapshot);
-                } else {
-                    setSelectedId(null); setIsPanning(true); setDragStart({ x: clientX, y: clientY }); setInitialOffset({ x: offset.x, y: offset.y });
-                }
+                } else { setSelectedId(null); setIsPanning(true); setDragStart({ x: clientX, y: clientY }); setInitialOffset({ x: offset.x, y: offset.y }); }
             };
 
             const handleMove = (clientX, clientY) => {
                 if (isDragging && selectedId && dragSnapshot) {
-                    const dx = (clientX - dragStart.x) / scale;
-                    const dy = (clientY - dragStart.y) / scale;
+                    const dx = (clientX - dragStart.x) / scale; const dy = (clientY - dragStart.y) / scale;
                     setNodes(nodes.map(n => dragSnapshot[n.id] ? { ...n, x: dragSnapshot[n.id].x + dx, y: dragSnapshot[n.id].y + dy } : n));
                 } else if (isResizing && selectedId) {
-                    const node = nodes.find(n => n.id === selectedId);
-                    const dx = (clientX - dragStart.x) / scale;
-                    setNodes(nodes.map(n => n.id === selectedId ? { ...n, width: Math.max(50, node.width + dx) } : n));
-                    setDragStart({ x: clientX, y: clientY }); 
-                } else if (isPanning) {
-                    setOffset({ x: initialOffset.x + clientX - dragStart.x, y: initialOffset.y + clientY - dragStart.y });
-                }
+                    const node = nodes.find(n => n.id === selectedId); const dx = (clientX - dragStart.x) / scale;
+                    setNodes(nodes.map(n => n.id === selectedId ? { ...n, width: Math.max(50, node.width + dx) } : n)); setDragStart({ x: clientX, y: clientY }); 
+                } else if (isPanning) { setOffset({ x: initialOffset.x + clientX - dragStart.x, y: initialOffset.y + clientY - dragStart.y }); }
             };
 
             const handleEnd = () => { setIsDragging(false); setIsPanning(false); setIsResizing(false); setDragSnapshot(null); setPinchDist(null); };
             const onMouseDown = (e, nodeId, type) => { if (e.button !== 0) return; e.stopPropagation(); handleStart(e.clientX, e.clientY, nodeId, type, e); };
             const onMouseMove = (e) => { handleMove(e.clientX, e.clientY); };
             const handleWheel = (e) => {
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    const newScale = Math.min(Math.max(0.1, scale - e.deltaY * 0.001), 5);
-                    const mouseWorld = screenToWorld(e.clientX, e.clientY);
-                    setScale(newScale);
-                    setOffset({ x: e.clientX - mouseWorld.x * newScale, y: e.clientY - mouseWorld.y * newScale });
-                } else { setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY })); }
+                if (e.ctrlKey || e.metaKey) { e.preventDefault(); const newScale = Math.min(Math.max(0.1, scale - e.deltaY * 0.001), 5); const mw = screenToWorld(e.clientX, e.clientY); setScale(newScale); setOffset({ x: e.clientX - mw.x * newScale, y: e.clientY - mw.y * newScale }); }
+                else { setOffset(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY })); }
             };
             const onTouchStart = (e, nodeId, type) => {
-                if (e.touches.length === 2) {
-                    setPinchDist(Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY));
-                    setIsPanning(false); setIsDragging(false);
-                } else if (e.touches.length === 1) handleStart(e.touches[0].clientX, e.touches[0].clientY, nodeId, type, e);
+                if (e.touches.length === 2) { setPinchDist(Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY)); setIsPanning(false); setIsDragging(false); }
+                else if (e.touches.length === 1) handleStart(e.touches[0].clientX, e.touches[0].clientY, nodeId, type, e);
             };
             const onTouchMove = (e) => {
-                if (e.touches.length === 2 && pinchDist !== null) {
-                    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                    const newScale = Math.min(Math.max(0.1, scale * (dist / pinchDist)), 5);
-                    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                    const cw = screenToWorld(cx, cy);
-                    setScale(newScale); setOffset({ x: cx - cw.x * newScale, y: cy - cw.y * newScale }); setPinchDist(dist); 
-                } else if (e.touches.length === 1) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                if (e.touches.length === 2 && pinchDist !== null) { const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); const newScale = Math.min(Math.max(0.1, scale * (dist / pinchDist)), 5); const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2; const cw = screenToWorld(cx, cy); setScale(newScale); setOffset({ x: cx - cw.x * newScale, y: cy - cw.y * newScale }); setPinchDist(dist); }
+                else if (e.touches.length === 1) handleMove(e.touches[0].clientX, e.touches[0].clientY);
             };
 
-            const getSubtree = (rootId) => {
-                const result = [];
-                const traverse = (id) => { const node = nodes.find(n => n.id === id); if(node) { result.push(node); nodes.filter(n => n.parentId === id).forEach(c => traverse(c.id)); } };
-                traverse(rootId); return result;
-            };
-            const copyNode = () => { if (!selectedId) return; const subtree = getSubtree(selectedId); setClipboard({ rootId: selectedId, data: JSON.parse(JSON.stringify(subtree)) }); };
+            const getSubtree = (rootId) => { const r = []; const t = (id) => { const n = nodes.find(x => x.id === id); if(n) { r.push(n); nodes.filter(c => c.parentId === id).forEach(c => t(c.id)); } }; t(rootId); return r; };
+            const copyNode = () => { if (!selectedId) return; setClipboard({ rootId: selectedId, data: JSON.parse(JSON.stringify(getSubtree(selectedId))) }); };
             const cutNode = () => { if (!selectedId || selectedId === 'root') return; copyNode(); deleteNode(); };
             const pasteNode = () => {
-                if (!clipboard || !selectedId) return;
-                const { rootId, data } = clipboard;
-                const targetParent = nodes.find(n => n.id === selectedId); if (!targetParent) return;
-                const root = nodes.find(n => !n.parentId);
-                let targetDir = targetParent.id !== root.id ? (targetParent.x >= root.x ? 1 : -1) : 1;
-                const clipboardRoot = data.find(n => n.id === rootId);
-                const descendants = data.filter(n => n.id !== rootId);
-                let sourceDir = descendants.length > 0 ? ((descendants.reduce((sum, n) => sum + (n.x - clipboardRoot.x), 0) / descendants.length) >= 0 ? 1 : -1) : targetDir;
-                const shouldFlip = targetDir !== sourceDir;
-                let siblings = nodes.filter(n => n.parentId === selectedId);
-                if (targetParent.parentId === null) siblings = siblings.filter(n => (n.x < targetParent.x ? -1 : 1) === targetDir);
-                siblings.sort((a, b) => a.y - b.y);
-                let newRootY = targetParent.y;
-                if (siblings.length > 0) {
-                    const lastSibling = siblings[siblings.length - 1];
-                    const subtreeMaxY = getSubtreeMaxY(lastSibling.id);
-                    newRootY = (subtreeMaxY !== null ? subtreeMaxY : (lastSibling.y + lastSibling.height)) + 20;
-                }
-                const newRootX = targetParent.x + (targetParent.width + 50) * targetDir;
-                const idMap = {}; data.forEach(n => idMap[n.id] = generateId());
-                const newNodes = data.map(node => {
-                    const isRoot = node.id === rootId;
-                    let relX = node.x - clipboardRoot.x; let relY = node.y - clipboardRoot.y;
-                    if (shouldFlip) relX = -relX;
-                    return { ...node, id: idMap[node.id], parentId: isRoot ? selectedId : idMap[node.parentId], x: newRootX + relX, y: newRootY + relY };
-                });
+                if (!clipboard || !selectedId) return; const { rootId, data } = clipboard; const target = nodes.find(n => n.id === selectedId); if (!target) return; const root = nodes.find(n => !n.parentId);
+                let tDir = target.id !== root.id ? (target.x >= root.x ? 1 : -1) : 1; const cRoot = data.find(n => n.id === rootId); const des = data.filter(n => n.id !== rootId);
+                let sDir = des.length > 0 ? ((des.reduce((s, n) => s + (n.x - cRoot.x), 0) / des.length) >= 0 ? 1 : -1) : tDir;
+                const flip = tDir !== sDir; let sib = nodes.filter(n => n.parentId === selectedId); if (target.parentId === null) sib = sib.filter(n => (n.x < target.x ? -1 : 1) === tDir); sib.sort((a, b) => a.y - b.y);
+                let ny = target.y; if (sib.length > 0) { const last = sib[sib.length - 1]; const max = getSubtreeMaxY(last.id); ny = (max !== null ? max : (last.y + last.height)) + 20; }
+                const nx = target.x + (target.width + 50) * tDir; const idMap = {}; data.forEach(n => idMap[n.id] = generateId());
+                const newNodes = data.map(n => { const isRoot = n.id === rootId; let rx = n.x - cRoot.x, ry = n.y - cRoot.y; if (flip) rx = -rx; return { ...n, id: idMap[n.id], parentId: isRoot ? selectedId : idMap[n.parentId], x: nx + rx, y: ny + ry }; });
                 setNodes([...nodes, ...newNodes]);
             };
 
             const addNode = () => {
-                if (!selectedId) return;
-                const parent = nodes.find(n => n.id === selectedId); if (!parent) return;
-                const newNodeId = generateId();
-                const root = nodes.find(n => !n.parentId);
-                let direction = parent.parentId === null ? (Math.random() > 0.5 ? 1 : -1) : (parent.x < root.x ? -1 : 1);
-                let siblings = nodes.filter(n => n.parentId === selectedId);
-                if (parent.parentId === null) siblings = siblings.filter(n => (n.x < parent.x ? -1 : 1) === direction);
-                let newY = parent.y;
-                if (siblings.length > 0) {
-                    siblings.sort((a, b) => a.y - b.y);
-                    const lastSibling = siblings[siblings.length - 1];
-                    const subtreeMaxY = getSubtreeMaxY(lastSibling.id);
-                    newY = (subtreeMaxY !== null ? subtreeMaxY : (lastSibling.y + lastSibling.height)) + 20;
-                }
-                setNodes([...nodes, { id: newNodeId, text: '', x: parent.x + (parent.width + 50) * direction, y: newY, width: 120, height: 40, parentId: selectedId, color: '#64748b' }]);
-                setSelectedId(newNodeId); setTimeout(() => setEditingId(newNodeId), 100);
+                if (!selectedId) return; const p = nodes.find(n => n.id === selectedId); if (!p) return; const nid = generateId(); const root = nodes.find(n => !n.parentId);
+                let dir = p.parentId === null ? (Math.random() > 0.5 ? 1 : -1) : (p.x < root.x ? -1 : 1); let sib = nodes.filter(n => n.parentId === selectedId);
+                if (p.parentId === null) sib = sib.filter(n => (n.x < p.x ? -1 : 1) === dir); let ny = p.y;
+                if (sib.length > 0) { sib.sort((a, b) => a.y - b.y); const last = sib[sib.length - 1]; const max = getSubtreeMaxY(last.id); ny = (max !== null ? max : (last.y + last.height)) + 20; }
+                setNodes([...nodes, { id: nid, text: '', x: p.x + (p.width + 50) * dir, y: ny, width: 120, height: 40, parentId: selectedId, color: '#64748b' }]); setSelectedId(nid); setTimeout(() => setEditingId(nid), 100);
             };
-
-            const deleteNode = () => {
-                if (!selectedId || selectedId === 'root') return;
-                const idsToDelete = new Set([selectedId]);
-                let changed = true;
-                while(changed) { changed = false; nodes.forEach(n => { if (n.parentId && idsToDelete.has(n.parentId) && !idsToDelete.has(n.id)) { idsToDelete.add(n.id); changed = true; } }); }
-                setNodes(nodes.filter(n => !idsToDelete.has(n.id))); setSelectedId(null);
-            };
-
+            const deleteNode = () => { if (!selectedId || selectedId === 'root') return; const dels = new Set([selectedId]); let c = true; while(c) { c = false; nodes.forEach(n => { if (n.parentId && dels.has(n.parentId) && !dels.has(n.id)) { dels.add(n.id); c = true; } }); } setNodes(nodes.filter(n => !dels.has(n.id))); setSelectedId(null); };
             const updateNodeText = (id, text) => setNodes(nodes.map(n => n.id === id ? { ...n, text } : n));
             const handleEditBlur = (id, text) => { setEditingId(null); if (!text || text.trim() === '') updateNodeText(id, '새로운 토픽'); };
-            
-            const exportMap = () => {
-                const data = JSON.stringify(nodes, null, 2);
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = 'mindmap.json'; a.click(); URL.revokeObjectURL(url);
-            };
-
-            const parseOpml = (xmlString) => {
-                const parser = new DOMParser(); const xmlDoc = parser.parseFromString(xmlString, "text/xml"); const opmlNodes = [];
-                const parseOutline = (xmlNode, parentId, level, yOffset) => {
-                    const text = xmlNode.getAttribute('text') || 'No Text';
-                    const id = generateId();
-                    let x = level * 200, y = yOffset; if (level === 0) { x = 0; y = 0; }
-                    opmlNodes.push({ id: level === 0 ? 'root' : id, text: text, x: x, y: y, width: 120, height: 40, parentId: parentId, color: level === 0 ? '#3b82f6' : '#64748b' });
-                    const children = xmlNode.children; let childYOffset = y - ((children.length * 60) / 2);
-                    for (let i = 0; i < children.length; i++) { if (children[i].tagName === 'outline') { parseOutline(children[i], level === 0 ? 'root' : id, level + 1, childYOffset); childYOffset += 60; } }
-                };
-                const body = xmlDoc.getElementsByTagName('body')[0]; if (body && body.children.length > 0) parseOutline(body.children[0], null, 0, 0);
-                return opmlNodes;
-            };
-            
-            const parseSmm = (jsonString) => {
-                try { const data = JSON.parse(jsonString); return data.nodes || null; } catch (e) { return null; }
-            };
-
+            const exportMap = () => { const d = JSON.stringify(nodes, null, 2); const b = new Blob([d], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'mindmap.json'; a.click(); URL.revokeObjectURL(u); };
             const importMap = (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const content = event.target.result;
-                        let loadedNodes = [];
-                        if (file.name.endsWith('.opml')) loadedNodes = parseOpml(content);
-                        else if (file.name.endsWith('.smm') || file.name.endsWith('.json')) loadedNodes = JSON.parse(content); // Support JSON import
-                        
-                        if (loadedNodes && loadedNodes.length > 0) { setNodes(loadedNodes); setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setScale(1); }
-                        else alert('가져올 데이터가 없습니다.');
-                    } catch (err) { alert('파일을 읽는 중 오류가 발생했습니다.'); }
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                };
-                reader.readAsText(file);
+                const f = e.target.files[0]; if (!f) return; const r = new FileReader();
+                r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); const n = d.nodes || d; if (n && n.length > 0) { setNodes(n); setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); setScale(1); } else alert('데이터 없음'); } catch (err) { alert('오류'); } if (fileInputRef.current) fileInputRef.current.value = ''; };
+                r.readAsText(f);
             };
 
-            useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if (editingId) return;
-                    if (e.key === 'Tab') { e.preventDefault(); addNode(); }
-                    else if (e.key === 'Delete' || e.key === 'Backspace') deleteNode();
-                    else if ((e.ctrlKey || e.metaKey) && e.key === 'c') copyNode();
-                    else if ((e.ctrlKey || e.metaKey) && e.key === 'x') cutNode();
-                    else if ((e.ctrlKey || e.metaKey) && e.key === 'v') pasteNode();
-                };
-                window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [selectedId, nodes, editingId, clipboard]);
+            useEffect(() => { const h = (e) => { if (editingId) return; if (e.key === 'Tab') { e.preventDefault(); addNode(); } else if (e.key === 'Delete' || e.key === 'Backspace') deleteNode(); else if ((e.ctrlKey || e.metaKey) && e.key === 'c') copyNode(); else if ((e.ctrlKey || e.metaKey) && e.key === 'x') cutNode(); else if ((e.ctrlKey || e.metaKey) && e.key === 'v') pasteNode(); }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [selectedId, nodes, editingId, clipboard]);
 
-            const renderConnections = () => nodes.map(node => {
-                if (!node.parentId) return null;
-                const parent = nodes.find(n => n.id === node.parentId); if (!parent) return null;
-                const startX = parent.x + (node.x > parent.x ? parent.width : 0);
-                const startY = parent.y + parent.height / 2;
-                const endX = node.x + (node.x > parent.x ? 0 : node.width);
-                const endY = node.y + node.height / 2;
-                const cp1x = startX + (endX - startX) / 2;
-                return <path key={`edge-${node.id}`} d={`M ${startX} ${startY} C ${cp1x} ${startY}, ${cp1x} ${endY}, ${endX} ${endY}`} stroke="#94a3b8" strokeWidth="2" fill="none" />;
-            });
+            const renderConnections = () => nodes.map(n => { if (!n.parentId) return null; const p = nodes.find(x => x.id === n.parentId); if (!p) return null; const sx = p.x + (n.x > p.x ? p.width : 0), sy = p.y + p.height / 2, ex = n.x + (n.x > p.x ? 0 : n.width), ey = n.y + n.height / 2, c1x = sx + (ex - sx) / 2; return <path key={`e-${n.id}`} d={`M ${sx} ${sy} C ${c1x} ${sy}, ${c1x} ${ey}, ${ex} ${ey}`} stroke="#94a3b8" strokeWidth="2" fill="none" />; });
 
             return (
                 <div className="w-full h-screen flex flex-col font-sans touch-none select-none">
@@ -453,7 +279,15 @@
                         <div className="flex items-center space-x-2">
                             <div className="bg-indigo-600 p-1.5 rounded-lg text-white mr-2"><Layout size={20} /></div>
                             <h1 className="font-bold text-lg text-slate-700 hidden md:block">MindCanvas</h1>
-                            {!user && <button onClick={() => window.SBL_MindMap?.login()} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200">로그인 필요</button>}
+                            {/* 저장 상태 표시 */}
+                            {user && (
+                                <div className="flex items-center text-xs ml-3 px-2 py-1 rounded bg-slate-100">
+                                    {saveStatus === 'saving' && <span className="text-orange-500 font-bold">저장 중...</span>}
+                                    {saveStatus === 'saved' && <span className="text-green-600 font-bold">✓ 저장됨</span>}
+                                    {saveStatus === 'idle' && <span className="text-slate-400">최신 상태</span>}
+                                </div>
+                            )}
+                            {!user && <button onClick={() => window.SBL_MindMap?.login()} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-bold">로그인</button>}
                         </div>
 
                         <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
@@ -474,10 +308,10 @@
                                 <button onClick={() => setScale(s => Math.min(5, s + 0.1))} className="p-1.5 hover:bg-white rounded-md text-slate-600"><Plus size={16} /></button>
                             </div>
                             <button onClick={exportMap} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Download size={20} /></button>
-                            <label className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"><Upload size={20} /><input type="file" accept=".json, .opml, .smm" className="hidden" ref={fileInputRef} onChange={importMap} /></label>
+                            <label className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"><Upload size={20} /><input type="file" accept=".json,.opml,.smm" className="hidden" ref={fileInputRef} onChange={importMap} /></label>
                             
-                            {/* Home Button */}
-                            <button onClick={() => window.location.href = '../index.html'} className="p-2 text-white bg-slate-700 hover:bg-slate-800 rounded-lg ml-2" title="홈으로"><Home size={20} /></button>
+                            {/* 홈 버튼 */}
+                            <button onClick={() => window.location.href = '../index.html'} className="p-2 text-white bg-slate-700 hover:bg-slate-800 rounded-lg ml-2 shadow-sm flex items-center" title="홈으로"><Home size={20} /></button>
                         </div>
                     </div>
 
