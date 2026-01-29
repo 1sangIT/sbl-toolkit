@@ -55,18 +55,17 @@
         .view-content { flex: 1; overflow-y: auto; display: none; padding: 10px 0 20px 0; }
         .view-content.active { display: block; }
 
-        /* === 만다라트 스타일 (버그 수정됨) === */
-        /* display: flex !important 제거 -> active 클래스로 제어 */
+        /* === 만다라트 스타일 (음영 문제 및 정렬 해결) === */
         .mandalart-container { 
             height: 100%; 
-            display: none; /* 기본 숨김 */
+            display: none; /* 기본적으로 숨김 (음영 버그 해결 핵심) */
             flex-direction: column;
             align-items: center; 
             justify-content: center;
             overflow: hidden; 
         }
         .mandalart-container.active {
-            display: flex; /* 활성화될 때만 보임 */
+            display: flex; /* 활성화될 때만 flex로 변경 */
         }
         
         .mandalart-grid { 
@@ -92,12 +91,15 @@
         }
         .sub-grid-center { border: 3px solid #000; z-index: 10; }
 
-        /* 텍스트 정중앙 정렬을 위해 div로 변경 */
+        /* 텍스트 정중앙 정렬 (Flex Box 사용) */
         .grid-cell { 
             width: 100%; height: 100%; 
             padding: 4px; border: 1px solid #eee; 
             font-size: 0.8rem; 
-            display: flex; align-items: center; justify-content: center; text-align: center;
+            display: flex; 
+            align-items: center; /* 세로 중앙 */
+            justify-content: center; /* 가로 중앙 */
+            text-align: center; /* 텍스트 자체 중앙 */
             word-break: keep-all; line-height: 1.3; font-weight: 600;
             cursor: text; outline: none; overflow: hidden;
         }
@@ -195,7 +197,7 @@
     </div>
 
     <script type="module">
-        // 파이어베이스 설정 (기존 앱들과 동일한 키 사용)
+        // 파이어베이스 설정
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
@@ -215,16 +217,13 @@
         const auth = getAuth(app);
         const ALLOWED = "eundang@gmail.com";
 
-        // 전역 변수
         window.currentYear = 2026;
         window.currentMonth = null;
         let currentUserId = null;
-        
         let allBigstoneData = {}; 
         let allMandalartData = {}; 
         let availableYears = [2026];
 
-        // 초기화
         onAuthStateChanged(auth, (user) => {
             if (user && user.email.toLowerCase() === ALLOWED) {
                 currentUserId = user.uid;
@@ -232,8 +231,6 @@
                 document.getElementById('userArea').style.display = 'flex';
                 document.getElementById('userAvatar').src = user.photoURL;
                 document.getElementById('userName').textContent = user.displayName;
-                
-                // 클라우드 데이터 로드
                 loadFromCloud();
             } else {
                 document.getElementById('loginArea').style.display = 'block';
@@ -246,12 +243,10 @@
 
         function loadFromCloud() {
             if(!currentUserId) return;
-            // 빅스톤 데이터 리스너
             onValue(ref(db, `users/${currentUserId}/bigstone`), (snapshot) => {
                 const val = snapshot.val();
                 if(val) {
                     allBigstoneData = val;
-                    // 저장된 연도들 확인하여 목록 갱신
                     const years = Object.keys(allBigstoneData).map(Number).filter(y => !isNaN(y));
                     if (years.length > 0) {
                         availableYears = [...new Set([...availableYears, ...years])].sort((a,b) => a-b);
@@ -260,8 +255,6 @@
                 }
                 refreshView();
             });
-
-            // 만다라트 데이터 리스너
             onValue(ref(db, `users/${currentUserId}/mandalart`), (snapshot) => {
                 const val = snapshot.val();
                 if(val) allMandalartData = val;
@@ -269,14 +262,13 @@
             });
         }
 
-        // 데이터 저장 (자동 백업)
+        // [핵심] 통합 저장 함수 (이걸로 모든 저장 로직 통일)
         function saveToCloud() {
             if(!currentUserId) return;
             set(ref(db, `users/${currentUserId}/bigstone`), allBigstoneData);
             set(ref(db, `users/${currentUserId}/mandalart`), allMandalartData);
         }
 
-        // 연도 및 데이터 관리
         function initYearSelect() {
             const select = document.getElementById('yearSelect');
             select.innerHTML = '';
@@ -293,7 +285,6 @@
             if (!input) return;
             const y = parseInt(input);
             if (isNaN(y) || y < 2020 || y > 2050) return alert("올바른 연도를 입력하세요.");
-            
             if(!availableYears.includes(y)) {
                 availableYears.push(y);
                 availableYears.sort((a,b)=>a-b);
@@ -309,11 +300,9 @@
         };
 
         function refreshView() {
-            // 현재 연도 데이터 준비
             if (!allBigstoneData[window.currentYear]) allBigstoneData[window.currentYear] = { bigstones: {}, todos: {} };
             if (!allMandalartData[window.currentYear]) allMandalartData[window.currentYear] = {};
             
-            // 현재 활성 탭에 따라 렌더링
             if(document.getElementById('bigstoneView').style.display !== 'none') {
                 window.currentMonth !== null ? showMonthDetail(window.currentMonth) : renderYearView();
             } else {
@@ -321,17 +310,14 @@
             }
         }
 
-        // === 뷰 렌더링: 빅스톤 ===
         const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
         
         function renderYearView() {
             const view = document.getElementById('yearView'); view.innerHTML = '';
             const data = allBigstoneData[window.currentYear];
-            
             months.forEach((m, i) => {
                 const card = document.createElement('div'); card.className = 'month-card';
                 card.onclick = () => showMonthDetail(i);
-                
                 let preview = '';
                 ['me','family','work'].forEach(c => {
                     const stones = data.bigstones[i]?.[c] || [];
@@ -352,10 +338,8 @@
             document.getElementById('monthDetail').classList.add('active');
             document.getElementById('monthTitle').textContent = `${window.currentYear}년 ${months[idx]} 목표`;
             
-            // 카테고리 렌더링
             const wrapper = document.getElementById('categories-wrapper');
             wrapper.innerHTML = '';
-            
             ['me', 'family', 'work'].forEach(cat => {
                 const label = cat==='me'?'나 (Self)':cat==='family'?'가족 (Family)':'업무 (Work)';
                 const div = document.createElement('div');
@@ -369,7 +353,6 @@
                 wrapper.appendChild(div);
                 renderTasks('bigstone', cat);
             });
-            
             renderTasks('todo', 'general');
         };
 
@@ -384,10 +367,8 @@
             const container = type==='bigstone' ? document.getElementById(`bigstone-${cat}`) : document.getElementById('todoList');
             if(!container) return;
             container.innerHTML = '';
-            
             const data = allBigstoneData[window.currentYear];
             const list = type==='bigstone' ? (data.bigstones[window.currentMonth]?.[cat] || []) : (data.todos[window.currentMonth] || []);
-
             list.forEach((t, i) => {
                 const div = document.createElement('div'); div.className = 'task-item';
                 div.innerHTML = `
@@ -402,16 +383,12 @@
             });
         }
 
-        // === 만다라트 렌더링 ===
         window.renderMandalart = function() {
             const grid = document.getElementById('mandalart-grid');
             if(grid.children.length === 0) createMandalartGrid(grid);
-            
             const data = allMandalartData[window.currentYear] || {};
             document.querySelectorAll('.grid-cell').forEach(cell => {
-                cell.textContent = data[cell.id] || ''; // div contenteditable은 textContent 사용
-                
-                // 외곽 그리드 중앙 셀 동기화 (읽기 전용)
+                cell.textContent = data[cell.id] || ''; 
                 const gId = parseInt(cell.dataset.gridId), cId = parseInt(cell.dataset.cellId);
                 if(gId === 4 && cId !== 4) {
                     const target = document.getElementById(`mcell-${cId}-4`);
@@ -426,49 +403,35 @@
                 const subGrid = document.createElement('div');
                 const isCenter = (i === 4);
                 subGrid.className = `sub-grid sub-grid-${i} ${isCenter ? 'sub-grid-center' : ''}`;
-                
                 for(let j=0; j<9; j++) {
-                    const cell = document.createElement('div'); // textarea -> div 변경
+                    const cell = document.createElement('div'); 
                     cell.className = 'grid-cell';
-                    cell.contentEditable = true; // 입력 가능하게 설정
+                    cell.contentEditable = true; 
                     cell.id = `mcell-${i}-${j}`;
                     cell.dataset.gridId = i; cell.dataset.cellId = j;
-
-                    // placeholder 역할 (CSS empty 가상클래스 활용)
                     if(i===4 && j===4) { cell.classList.add('main-goal'); cell.setAttribute('placeholder', '핵심\n목표'); }
                     else if(i===4) { cell.classList.add('sub-goal'); cell.setAttribute('placeholder', '세부\n목표'); }
-                    else if(j===4) { 
-                        cell.classList.add('sub-goal'); cell.contentEditable = false; // 읽기 전용
-                        cell.setAttribute('placeholder', '세부\n목표'); 
-                    } 
+                    else if(j===4) { cell.classList.add('sub-goal'); cell.contentEditable = false; cell.setAttribute('placeholder', '세부\n목표'); } 
                     else { cell.setAttribute('placeholder', '계획'); }
-
-                    // 입력 이벤트 (div는 input 이벤트로 텍스트 감지)
                     cell.addEventListener('input', (e) => {
                         const val = e.target.textContent;
                         if(!allMandalartData[window.currentYear]) allMandalartData[window.currentYear] = {};
                         allMandalartData[window.currentYear][e.target.id] = val;
-                        
-                        // 중앙 -> 외곽 동기화
                         if(i===4 && j!==4) {
                             const t = document.getElementById(`mcell-${j}-4`);
                             if(t) t.textContent = val;
                         }
-                        saveToCloud(); // 자동 저장
+                        saveToCloud();
                     });
-                    
                     subGrid.appendChild(cell);
                 }
                 grid.appendChild(subGrid);
             }
         }
 
-        // === 탭 전환 ===
         window.switchTab = function(name) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            
-            // 만다라트 컨테이너의 active 클래스 토글 (CSS display flex 제어용)
             if (name === 'mandalart') {
                 document.getElementById('bigstoneView').style.display = 'none';
                 document.getElementById('mandalartView').classList.add('active');
@@ -480,7 +443,6 @@
             }
         };
 
-        // === 데이터 조작 (폼) ===
         window.showAddForm = (t, c) => {
             const f = document.getElementById(`form-${t}-${c}`);
             f.innerHTML = `
@@ -498,7 +460,6 @@
             const txt = document.getElementById(`in-${t}-${c}`).value;
             if(!txt) return;
             const task = { text: txt, deadline: document.getElementById(`date-${t}-${c}`).value, completed: false };
-            
             const d = allBigstoneData[window.currentYear];
             if(t==='bigstone') {
                 if(!d.bigstones[window.currentMonth]) d.bigstones[window.currentMonth]={};
@@ -508,7 +469,6 @@
                 if(!d.todos[window.currentMonth]) d.todos[window.currentMonth]=[];
                 d.todos[window.currentMonth].push(task);
             }
-            
             saveToCloud();
             document.getElementById(`form-${t}-${c}`).classList.remove('active');
             t==='bigstone'?renderTasks(t, c):renderTasks(t, 'general');
@@ -531,13 +491,11 @@
             t==='bigstone'?renderTasks(t, c):renderTasks(t, 'general');
         };
 
-        // 로컬 내보내기 (백업용)
         window.exportData = () => {
             const blob = new Blob([JSON.stringify({bigstones:allBigstoneData, mandalarts:allMandalartData},null,2)], {type:'application/json'});
             const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
         };
 
-        // 초기 실행: 연도는 기본 설정하되 데이터는 Auth 로드 후 갱신
         initYearSelect();
     </script>
 </body>
