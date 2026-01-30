@@ -385,57 +385,101 @@
             });
         }
 
-        // === 만다라트 (textarea로 변경하여 한글 입력 문제 해결) ===
+        // === 만다라트 (수정됨: 중앙-외곽 연동 버그 수정) ===
+        
+        // 중앙 그리드(i=4)의 셀 인덱스(j) -> 외곽 그리드 인덱스 매핑
+        // 중앙 그리드 셀 배치:  0 1 2
+        //                      3 4 5
+        //                      6 7 8
+        // 외곽 그리드 배치:     0 1 2
+        //                      3 X 5
+        //                      6 7 8
+        // 즉, 중앙 그리드의 j번 셀 값이 -> 외곽 그리드 j번의 중앙(4번 셀)으로 복사됨
+        
         window.renderMandalart = function() {
             const grid = document.getElementById('mandalart-grid');
             if(grid.children.length === 0) createMandalartGrid(grid);
             const data = allMandalartData[window.currentYear] || {};
             
-            // 모든 textarea에 값 채우기
+            // 1단계: 모든 셀에 저장된 값 채우기
             document.querySelectorAll('.grid-input').forEach(input => {
-                input.value = data[input.id] || '';
-                
-                // 외곽 그리드의 중앙 셀(readOnly) 동기화
-                const gId = parseInt(input.dataset.gridId), cId = parseInt(input.dataset.cellId);
-                if(gId === 4 && cId !== 4) {
-                    const target = document.getElementById(`mcell-${cId}-4`);
-                    if(target) target.value = input.value;
-                }
+                const savedValue = data[input.id] || '';
+                input.value = savedValue;
             });
+            
+            // 2단계: 중앙 그리드(i=4)의 세부목표(j!=4) 값을 외곽 그리드의 중앙 셀로 동기화
+            for(let j = 0; j < 9; j++) {
+                if(j === 4) continue; // 메인 목표(4-4)는 제외
+                
+                const centerCell = document.getElementById(`mcell-4-${j}`);
+                const outerCenterCell = document.getElementById(`mcell-${j}-4`);
+                
+                if(centerCell && outerCenterCell) {
+                    outerCenterCell.value = centerCell.value;
+                }
+            }
         }
 
         function createMandalartGrid(grid) {
             grid.innerHTML = '';
-            for(let i=0; i<9; i++) {
+            for(let i = 0; i < 9; i++) {
                 const subGrid = document.createElement('div');
                 const isCenter = (i === 4);
                 subGrid.className = `sub-grid sub-grid-${i} ${isCenter ? 'sub-grid-center' : ''}`;
                 
-                for(let j=0; j<9; j++) {
+                for(let j = 0; j < 9; j++) {
                     const cellWrapper = document.createElement('div');
                     cellWrapper.className = 'cell-wrapper';
                     
                     const cell = document.createElement('textarea');
                     cell.className = 'grid-input';
                     cell.id = `mcell-${i}-${j}`;
-                    cell.dataset.gridId = i; cell.dataset.cellId = j;
+                    cell.dataset.gridId = i;
+                    cell.dataset.cellId = j;
                     cell.spellcheck = false;
 
-                    if(i===4 && j===4) { cellWrapper.classList.add('main-goal'); cell.placeholder = '핵심\n목표'; }
-                    else if(i===4) { cellWrapper.classList.add('sub-goal'); cell.placeholder = '세부\n목표'; }
-                    else if(j===4) { cellWrapper.classList.add('sub-goal'); cell.readOnly = true; cell.placeholder = '세부\n목표'; } 
-                    else { cell.placeholder = '계획'; }
+                    // 셀 타입 설정
+                    if(i === 4 && j === 4) {
+                        // 중앙 그리드의 중앙 = 메인 목표
+                        cellWrapper.classList.add('main-goal');
+                        cell.placeholder = '핵심\n목표';
+                    } else if(i === 4) {
+                        // 중앙 그리드의 나머지 8칸 = 세부 목표 (편집 가능)
+                        cellWrapper.classList.add('sub-goal');
+                        cell.placeholder = '세부\n목표';
+                    } else if(j === 4) {
+                        // 외곽 그리드의 중앙 = 세부 목표 (읽기 전용, 중앙에서 복사됨)
+                        cellWrapper.classList.add('sub-goal');
+                        cell.readOnly = true;
+                        cell.placeholder = '세부\n목표';
+                        cell.style.cursor = 'default';
+                    } else {
+                        // 외곽 그리드의 나머지 = 실행 계획
+                        cell.placeholder = '계획';
+                    }
                     
+                    // 입력 이벤트 핸들러
                     cell.addEventListener('input', (e) => {
+                        const gId = parseInt(e.target.dataset.gridId);
+                        const cId = parseInt(e.target.dataset.cellId);
                         const val = e.target.value;
-                        if(!allMandalartData[window.currentYear]) allMandalartData[window.currentYear] = {};
+                        
+                        // 데이터 저장
+                        if(!allMandalartData[window.currentYear]) {
+                            allMandalartData[window.currentYear] = {};
+                        }
                         allMandalartData[window.currentYear][e.target.id] = val;
                         
-                        // 중앙 -> 외곽 연동
-                        if(i===4 && j!==4) {
-                            const t = document.getElementById(`mcell-${j}-4`);
-                            if(t) t.value = val;
+                        // 중앙 그리드(i=4)의 세부 목표(j!=4) 변경 시 -> 해당 외곽 그리드의 중앙 셀로 동기화
+                        if(gId === 4 && cId !== 4) {
+                            const outerCenterCell = document.getElementById(`mcell-${cId}-4`);
+                            if(outerCenterCell) {
+                                outerCenterCell.value = val;
+                                // 동기화된 값도 저장 (외곽 중앙 셀은 readOnly지만 데이터는 저장)
+                                allMandalartData[window.currentYear][`mcell-${cId}-4`] = val;
+                            }
                         }
+                        
                         saveToCloud();
                     });
                     
