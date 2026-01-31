@@ -13,6 +13,17 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
         #main-content { display: none; }
+        
+        /* 트래커 저장 버튼 스타일 */
+        .btn-save-tracker {
+            opacity: 0.4;
+            transition: all 0.2s;
+        }
+        .btn-save-tracker:hover {
+            opacity: 1;
+            color: #ef4444; /* 붉은색 강조 */
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 sm:p-8">
@@ -54,8 +65,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
@@ -81,8 +92,10 @@
                 document.getElementById('main-content').style.display = 'block';
                 loadCloudData();
             } else {
-                alert("권한이 없습니다.");
-                location.href = "../index.html";
+                signInWithPopup(auth, new GoogleAuthProvider()).catch(e => {
+                    alert("로그인이 필요합니다.");
+                    location.href = "../index.html";
+                });
             }
         });
 
@@ -109,7 +122,34 @@
             set(ref(db, `users/${currentUserId}/newsSettings`), cleanState);
         }
 
-        // --- 원본 UI 로직 복원 ---
+        // [핵심 기능] 트래커로 뉴스 전송
+        window.saveToTracker = async (title, url, dateStr, keyword) => {
+            if (!currentUserId) return alert("로그인이 필요합니다.");
+            
+            if (!confirm(`'${title}'\n\n이 뉴스를 인사이트 트래커에 저장하시겠습니까?`)) return;
+
+            try {
+                // 트래커 데이터 경로 (users/{uid}/news)로 데이터 푸시
+                const trackerRef = ref(db, `users/${currentUserId}/news`);
+                
+                const newNews = {
+                    title: title,
+                    url: url,
+                    date: dateStr.split('T')[0], // YYYY-MM-DD
+                    tags: [keyword], // 검색 키워드를 태그로 자동 지정
+                    note: "뉴스 리더에서 스크랩함",
+                    timestamp: Date.now()
+                };
+
+                await push(trackerRef, newNews);
+                alert("✅ 트래커에 저장되었습니다!");
+            } catch (e) {
+                console.error(e);
+                alert("❌ 저장 실패: " + e.message);
+            }
+        };
+
+        // --- 기존 로직 ---
         const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const formatNewsDate = (timestamp) => {
             const date = new Date(timestamp);
@@ -158,12 +198,19 @@
             else if (k.news && k.news.length > 0) {
                 const display = k.showMore ? k.allNews : k.news;
                 contentHtml = `<ul class="space-y-3">` + display.map((n, i) => `
-                    <li class="${i > 0 ? 'pt-3 border-t border-gray-100' : ''}">
-                        <a href="${n.url}" target="_blank" class="block hover:bg-gray-50 p-1 rounded transition">
-                            <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${n.title}</h4>
-                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">${n.summary || ''}</p>
-                            <p class="text-xs text-gray-400 mt-1">${formatNewsDate(n.timestamp)}</p>
-                        </a>
+                    <li class="${i > 0 ? 'pt-3 border-t border-gray-100' : ''} group relative">
+                        <div class="flex justify-between items-start">
+                            <a href="${n.url}" target="_blank" class="block hover:bg-gray-50 p-1 rounded transition flex-grow">
+                                <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${n.title}</h4>
+                                <p class="text-xs text-gray-500 mt-1 line-clamp-2">${n.summary || ''}</p>
+                                <p class="text-xs text-gray-400 mt-1">${formatNewsDate(n.timestamp)}</p>
+                            </a>
+                            <button class="btn-save-tracker p-1 ml-1 text-gray-400" 
+                                title="트래커에 저장"
+                                onclick="saveToTracker('${n.title.replace(/'/g, "\\'")}', '${n.url}', '${new Date(n.timestamp).toISOString()}', '${k.name}')">
+                                <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                     </li>`).join('') + `</ul>`;
                 updateTime = new Date(k.news[0].timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
             } else contentHtml = '<div class="text-gray-500 min-h-[150px] text-center p-4">뉴스가 없습니다.</div>';
@@ -185,7 +232,6 @@
                 </div>`;
         }
 
-        // --- RSS 연동 및 액션 로직 ---
         window.fetchNews = async (catId, keyId) => {
             const cat = state.categories.find(c => c.id === catId);
             const k = cat.keywords.find(k => k.id === keyId);
@@ -196,8 +242,7 @@
                 const data = await res.json();
                 if (data.status === 'ok') {
                     k.allNews = data.items.map(i => ({
-                        title: i.title,
-                        url: i.link,
+                        title: i.title, url: i.link,
                         summary: i.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...',
                         timestamp: new Date(i.pubDate).getTime()
                     })).sort((a,b) => b.timestamp - a.timestamp);
@@ -229,32 +274,23 @@
             state.categories.forEach(c => c.keywords.forEach(k => fetchNews(c.id, k.id)));
         };
 
-        // --- 가져오기/내보내기 로직 ---
         window.exportData = () => {
-            const data = { exportDate: new Date().toISOString(), data: state };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `sbl-news-backup.json`;
-            a.click();
+            const blob = new Blob([JSON.stringify({ exportDate: new Date().toISOString(), data: state }, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `sbl-news-backup.json`; a.click();
         };
 
         window.triggerImport = () => document.getElementById('import-file-input').click();
         window.handleImport = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    // 원본 백업 파일({data: state}) 형식을 완벽하게 처리
                     state = imported.data || imported;
-                    saveCloudData();
-                    alert("가져오기 성공!");
+                    saveCloudData(); alert("가져오기 성공!");
                 } catch (err) { alert("잘못된 형식입니다."); }
             };
-            reader.readAsText(file);
-            event.target.value = '';
+            reader.readAsText(file); event.target.value = '';
         };
     </script>
 </body>
