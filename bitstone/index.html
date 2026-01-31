@@ -138,10 +138,61 @@
         input, textarea { width: 100%; padding: 6px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; }
 
         @media (max-width: 768px) {
-            .month-detail.active { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-            .mandalart-grid { max-width: 100%; margin-top: 10px; }
+            .container { padding: 5px; }
+            header { padding: 8px 10px; }
+            .header-top { flex-wrap: wrap; gap: 8px; }
+            .title-area { flex: 1; min-width: 150px; }
+            h1 { font-size: 16px; }
+            .buttons { flex-wrap: wrap; }
             .buttons span { display: none; }
             .user-info span { display: none; }
+            .tab { padding: 8px 10px; font-size: 13px; }
+            
+            .month-detail.active { 
+                grid-template-columns: 1fr; 
+                grid-template-rows: auto auto;
+                gap: 10px;
+            }
+            .section { padding: 10px; }
+            .section h3 { font-size: 14px; }
+            .section h4 { font-size: 13px; }
+            
+            .year-view { 
+                grid-template-columns: repeat(3, 1fr); 
+                gap: 8px; 
+            }
+            .month-card { padding: 8px; }
+            .month-name { font-size: 13px; padding-bottom: 4px; margin-bottom: 4px; }
+            .bigstone-preview { min-height: 40px; font-size: 10px; }
+            
+            .task-item { padding: 10px 8px; }
+            .add-task-form.active { padding: 8px; }
+            input, textarea { padding: 10px 8px; font-size: 16px; } /* 모바일 줌 방지 */
+            
+            .mandalart-grid { 
+                max-width: 100%; 
+                max-height: calc(100vh - 140px);
+                margin-top: 5px; 
+            }
+            .grid-input { font-size: 0.65rem; }
+            .main-goal .grid-input { font-size: 0.8rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .year-view { 
+                grid-template-columns: repeat(2, 1fr); 
+            }
+            .header-top { 
+                flex-direction: column; 
+                align-items: flex-start; 
+            }
+            .buttons { 
+                width: 100%; 
+                justify-content: space-between; 
+            }
+            .grid-input { font-size: 0.55rem; line-height: 1.2; }
+            .main-goal .grid-input { font-size: 0.7rem; }
+            .cell-wrapper { padding: 1px; }
         }
     </style>
 </head>
@@ -187,7 +238,7 @@
                 <div class="section">
                     <h3 style="margin-bottom:10px; font-weight:700">세부 실행 계획 (To-Do)</h3>
                     <div id="todoList"></div>
-                    <button class="btn-secondary" onclick="showAddForm('todo', 'general')" style="width:100%; margin-top:10px">+ 할 일 추가</button>
+                    <button class="btn-secondary" onclick="showAddForm('todo', 'general')" style="margin-top:10px">+ 할 일 추가</button>
                     <div id="form-todo-general" class="add-task-form"></div>
                 </div>
             </div>
@@ -349,7 +400,7 @@
                 div.innerHTML = `
                     <h4 style="color:#555; margin:15px 0 5px;">${label}</h4>
                     <div id="bigstone-${cat}"></div>
-                    <button class="btn-secondary" onclick="showAddForm('bigstone', '${cat}')" style="width:100%; margin-top:5px; font-size:12px;">+ 목표 추가</button>
+                    <button class="btn-secondary" onclick="showAddForm('bigstone', '${cat}')" style="margin-top:5px; font-size:12px;">+ 목표 추가</button>
                     <div id="form-bigstone-${cat}" class="add-task-form"></div>
                 `;
                 wrapper.appendChild(div);
@@ -507,11 +558,11 @@
         window.showAddForm = (t, c) => {
             const f = document.getElementById(`form-${t}-${c}`);
             f.innerHTML = `
-                <input id="in-${t}-${c}" placeholder="내용 입력">
+                <input id="in-${t}-${c}" placeholder="내용 입력" onkeydown="if(event.key==='Enter'){event.preventDefault();addT('${t}','${c}');}">
                 <input type="date" id="date-${t}-${c}">
-                <div style="text-align:right; margin-top:5px;">
-                    <button class="btn-secondary" onclick="this.parentElement.parentElement.classList.remove('active')">취소</button> 
-                    <button style="background:#1a73e8;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer" onclick="addT('${t}','${c}')">저장</button>
+                <div style="text-align:left; margin-top:5px;">
+                    <button type="button" style="background:#1a73e8;color:white;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;margin-right:5px;" onclick="addT('${t}','${c}')">저장</button>
+                    <button type="button" class="btn-secondary" onclick="this.parentElement.parentElement.classList.remove('active')">취소</button>
                 </div>`;
             f.classList.add('active');
             document.getElementById(`in-${t}-${c}`).focus();
