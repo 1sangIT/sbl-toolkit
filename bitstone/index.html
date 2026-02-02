@@ -126,7 +126,25 @@
         .month-detail.active { display: grid; }
         .section { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #eee; overflow-y: auto; }
         
-        .task-item { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; display: flex; align-items: center; border-left: 3px solid #1a73e8; }
+        /* [추가 기능] 스타일: 중요(별표) 및 드래그 관련 */
+        .task-item { 
+            background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; 
+            display: flex; align-items: center; border-left: 3px solid #1a73e8; 
+            cursor: grab; /* 드래그 가능 커서 */
+            transition: all 0.2s ease;
+        }
+        .task-item:active { cursor: grabbing; }
+        .task-item.dragging { opacity: 0.5; border: 2px dashed #1a73e8; background: #e8f0fe; }
+        
+        /* 중요 표시 스타일 */
+        .task-item.important { background-color: #fffde7; border-left-color: #fbc02d; }
+        .star-btn { 
+            border: none; background: none; cursor: pointer; font-size: 16px; 
+            color: #ddd; margin-right: 5px; padding: 0 2px;
+            transition: color 0.2s;
+        }
+        .task-item.important .star-btn { color: #fbc02d; } /* 노란 별 */
+
         .task-actions { margin-left: auto; display: flex; gap: 5px; }
         .btn-icon { border: none; background: none; cursor: pointer; font-size: 14px; opacity: 0.5; transition: opacity 0.2s; }
         .btn-icon:hover { opacity: 1; }
@@ -323,7 +341,7 @@
                     if(stones.length) {
                         const label = c==='me'?'나':c==='family'?'가족':'업무';
                         preview += `<div style="font-size:11px;font-weight:bold;color:#1a73e8;margin-top:4px">${label}</div>` + 
-                                   stones.slice(0,2).map(s=>`<div style="font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">• ${s.text}</div>`).join('');
+                                   stones.slice(0,2).map(s=>`<div style="font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.important?'★ ':''}• ${s.text}</div>`).join('');
                     }
                 });
                 card.innerHTML = `<div class="month-name">${m}</div><div class="bigstone-preview">${preview||'<span style="color:#ddd;font-size:11px">목표 없음</span>'}</div>`;
@@ -345,7 +363,7 @@
                 div.className = 'category-group';
                 div.innerHTML = `
                     <h4 style="color:#555; margin:15px 0 5px;">${label}</h4>
-                    <div id="bigstone-${cat}"></div>
+                    <div id="bigstone-${cat}" class="task-container"></div>
                     <button class="btn-secondary" onclick="showAddForm('bigstone', '${cat}')" style="margin-top:5px; font-size:12px;">+ 목표 추가</button>
                     <div id="form-bigstone-${cat}" class="add-task-form"></div>
                 `;
@@ -362,6 +380,7 @@
             renderYearView();
         };
 
+        // [추가 기능] 리스트 렌더링 수정: 드래그 이벤트 + 별표 버튼 추가
         function renderTasks(type, cat) {
             const container = type==='bigstone' ? document.getElementById(`bigstone-${cat}`) : document.getElementById('todoList');
             if(!container) return;
@@ -369,11 +388,29 @@
             const data = allBigstoneData[window.currentYear];
             const list = type==='bigstone' ? (data.bigstones[window.currentMonth]?.[cat] || []) : (data.todos[window.currentMonth] || []);
             
+            // 컨테이너에 드래그 오버 이벤트 등록 (드롭 위치 계산용)
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(container, e.clientY);
+                const draggable = container.querySelector('.dragging');
+                if (draggable) {
+                    if (afterElement == null) {
+                        container.appendChild(draggable);
+                    } else {
+                        container.insertBefore(draggable, afterElement);
+                    }
+                }
+            });
+
             list.forEach((t, i) => {
                 const div = document.createElement('div'); 
-                div.className = 'task-item';
+                div.className = `task-item ${t.important ? 'important' : ''}`;
                 div.id = `task-${type}-${cat}-${i}`;
+                div.setAttribute('draggable', 'true'); // 드래그 활성화
+                div.dataset.index = i; // 원래 인덱스 저장
+
                 div.innerHTML = `
+                    <button class="star-btn" onclick="toggleStar('${type}','${cat}',${i})">★</button>
                     <input type="checkbox" ${t.completed?'checked':''} onchange="toggleTask('${type}','${cat}',${i})" style="width:18px;height:18px;margin:0">
                     <div style="flex:1;margin-left:8px">
                         <div style="${t.completed?'text-decoration:line-through;color:#aaa':''} font-size:13px; font-weight:500;">${t.text}</div>
@@ -384,11 +421,64 @@
                         <button class="btn-icon" style="color:#f44336;" onclick="delTask('${type}','${cat}',${i})" title="삭제">✕</button>
                     </div>
                 `;
+                
+                // 드래그 시작/종료 이벤트
+                div.addEventListener('dragstart', () => div.classList.add('dragging'));
+                div.addEventListener('dragend', () => {
+                    div.classList.remove('dragging');
+                    updateOrder(type, cat, container); // 순서 변경 저장 함수 호출
+                });
+
                 container.appendChild(div);
             });
         }
 
-        // --- 수정(Edit) 기능 (복구됨) ---
+        // [추가 기능] 드래그 위치 계산 함수
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // [추가 기능] 순서 변경 후 데이터 업데이트 및 저장
+        function updateOrder(type, cat, container) {
+            const d = allBigstoneData[window.currentYear];
+            const oldList = type==='bigstone' ? d.bigstones[window.currentMonth][cat] : d.todos[window.currentMonth];
+            
+            // DOM에 있는 순서대로 새로운 배열 생성
+            const newOrderIndices = [...container.children].map(child => parseInt(child.dataset.index));
+            const newList = newOrderIndices.map(index => oldList[index]);
+
+            // 데이터 덮어쓰기
+            if(type === 'bigstone') {
+                d.bigstones[window.currentMonth][cat] = newList;
+            } else {
+                d.todos[window.currentMonth] = newList;
+            }
+            saveToCloud();
+            // 재렌더링 (인덱스 재정렬을 위해)
+            if(type === 'bigstone') renderTasks(type, cat);
+            else renderTasks(type, 'general');
+        }
+
+        // [추가 기능] 중요 별표 토글
+        window.toggleStar = (type, cat, i) => {
+            const d = allBigstoneData[window.currentYear];
+            const list = type==='bigstone' ? d.bigstones[window.currentMonth][cat] : d.todos[window.currentMonth];
+            list[i].important = !list[i].important;
+            saveToCloud();
+            if(type === 'bigstone') renderTasks(type, cat);
+            else renderTasks(type, 'general');
+        };
+
+        // --- 수정(Edit) 기능 ---
         window.editTask = (type, cat, index) => {
             const d = allBigstoneData[window.currentYear];
             const list = type==='bigstone' ? d.bigstones[window.currentMonth][cat] : d.todos[window.currentMonth];
@@ -396,8 +486,8 @@
             const taskEl = document.getElementById(`task-${type}-${cat}-${index}`);
             if(!taskEl) return;
 
-            // 수정 폼으로 교체
             taskEl.dataset.originalHtml = taskEl.innerHTML;
+            taskEl.removeAttribute('draggable'); // 수정 중 드래그 방지
             taskEl.innerHTML = `
                 <div style="width:100%">
                     <input id="edit-txt-${type}-${cat}-${index}" value="${task.text}" style="width:100%; padding:5px; margin-bottom:5px;">
@@ -412,7 +502,6 @@
             const input = document.getElementById(`edit-txt-${type}-${cat}-${index}`);
             input.focus();
             
-            // 엔터키 저장 (수정 모드)
             input.addEventListener('keydown', (e) => {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -434,13 +523,11 @@
             list[index].deadline = date;
             
             saveToCloud();
-            // 해당 리스트만 다시 렌더링
             if(type === 'bigstone') renderTasks(type, cat);
             else renderTasks(type, 'general');
         };
 
         window.cancelEdit = (type, cat, index) => {
-            // 원복 (다시 렌더링)
             if(type === 'bigstone') renderTasks(type, cat);
             else renderTasks(type, 'general');
         };
@@ -526,7 +613,6 @@
             const inputEl = document.getElementById(`in-${t}-${c}`);
             inputEl.focus();
             
-            // 엔터키 저장 (추가 모드)
             inputEl.addEventListener('keydown', function(e) {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -537,10 +623,11 @@
 
         window.addT = (t, c) => {
             const txt = document.getElementById(`in-${t}-${c}`).value;
+            const deadline = document.getElementById(`date-${t}-${c}`).value;
             if(!txt) return;
-            const task = { text: txt, deadline: document.getElementById(`date-${t}-${c}`).value, completed: false };
+            // 중요도(important) 속성 추가 (기본값 false)
+            const task = { text: txt, deadline: deadline, completed: false, important: false };
             
-            // 데이터 안전 초기화
             if (!allBigstoneData[window.currentYear]) {
                 allBigstoneData[window.currentYear] = { bigstones: {}, todos: {} };
             }
