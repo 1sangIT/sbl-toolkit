@@ -100,6 +100,7 @@
         .grid-input::placeholder { color: #aaa; font-weight: 400; }
         .grid-input:focus { background-color: rgba(26, 115, 232, 0.1); }
 
+        /* 만다라트 색상 테마 */
         .sub-grid-0, .sub-grid-0 .cell-wrapper, .sub-grid-0 textarea { background-color: #ffebee; }
         .sub-grid-1, .sub-grid-1 .cell-wrapper, .sub-grid-1 textarea { background-color: #fff3e0; }
         .sub-grid-2, .sub-grid-2 .cell-wrapper, .sub-grid-2 textarea { background-color: #fffde7; }
@@ -126,6 +127,10 @@
         .section { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #eee; overflow-y: auto; }
         
         .task-item { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 4px; display: flex; align-items: center; border-left: 3px solid #1a73e8; }
+        .task-actions { margin-left: auto; display: flex; gap: 5px; }
+        .btn-icon { border: none; background: none; cursor: pointer; font-size: 14px; opacity: 0.5; transition: opacity 0.2s; }
+        .btn-icon:hover { opacity: 1; }
+
         .add-task-form.active { display: block; padding: 10px; background: #eee; border-radius: 4px; margin-top: 5px; }
         .add-task-form { display: none; }
         input, textarea { width: 100%; padding: 6px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; }
@@ -363,20 +368,84 @@
             container.innerHTML = '';
             const data = allBigstoneData[window.currentYear];
             const list = type==='bigstone' ? (data.bigstones[window.currentMonth]?.[cat] || []) : (data.todos[window.currentMonth] || []);
+            
             list.forEach((t, i) => {
-                const div = document.createElement('div'); div.className = 'task-item';
+                const div = document.createElement('div'); 
+                div.className = 'task-item';
+                div.id = `task-${type}-${cat}-${i}`;
                 div.innerHTML = `
                     <input type="checkbox" ${t.completed?'checked':''} onchange="toggleTask('${type}','${cat}',${i})" style="width:18px;height:18px;margin:0">
                     <div style="flex:1;margin-left:8px">
                         <div style="${t.completed?'text-decoration:line-through;color:#aaa':''} font-size:13px; font-weight:500;">${t.text}</div>
                         ${t.deadline?`<div style="font-size:11px;color:#888">📅 ${t.deadline}</div>`:''}
                     </div>
-                    <button style="border:none;background:none;cursor:pointer;color:#999" onclick="delTask('${type}','${cat}',${i})">✕</button>
+                    <div class="task-actions">
+                        <button class="btn-icon" onclick="editTask('${type}','${cat}',${i})" title="수정">✏️</button>
+                        <button class="btn-icon" style="color:#f44336;" onclick="delTask('${type}','${cat}',${i})" title="삭제">✕</button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
         }
 
+        // --- 수정(Edit) 기능 (복구됨) ---
+        window.editTask = (type, cat, index) => {
+            const d = allBigstoneData[window.currentYear];
+            const list = type==='bigstone' ? d.bigstones[window.currentMonth][cat] : d.todos[window.currentMonth];
+            const task = list[index];
+            const taskEl = document.getElementById(`task-${type}-${cat}-${index}`);
+            if(!taskEl) return;
+
+            // 수정 폼으로 교체
+            taskEl.dataset.originalHtml = taskEl.innerHTML;
+            taskEl.innerHTML = `
+                <div style="width:100%">
+                    <input id="edit-txt-${type}-${cat}-${index}" value="${task.text}" style="width:100%; padding:5px; margin-bottom:5px;">
+                    <input type="date" id="edit-date-${type}-${cat}-${index}" value="${task.deadline || ''}" style="width:100%; padding:5px; margin-bottom:5px;">
+                    <div style="text-align:right">
+                        <button class="btn-secondary" style="padding:4px 8px; font-size:12px; margin-right:5px;" onclick="cancelEdit('${type}','${cat}',${index})">취소</button>
+                        <button style="background:#1a73e8;color:white;padding:4px 8px;border:none;border-radius:4px;font-size:12px;cursor:pointer" onclick="saveEdit('${type}','${cat}',${index})">저장</button>
+                    </div>
+                </div>
+            `;
+            
+            const input = document.getElementById(`edit-txt-${type}-${cat}-${index}`);
+            input.focus();
+            
+            // 엔터키 저장 (수정 모드)
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    window.saveEdit(type, cat, index);
+                }
+            });
+        };
+
+        window.saveEdit = (type, cat, index) => {
+            const txt = document.getElementById(`edit-txt-${type}-${cat}-${index}`).value.trim();
+            const date = document.getElementById(`edit-date-${type}-${cat}-${index}`).value;
+            
+            if(!txt) return alert('내용을 입력하세요');
+
+            const d = allBigstoneData[window.currentYear];
+            const list = type==='bigstone' ? d.bigstones[window.currentMonth][cat] : d.todos[window.currentMonth];
+            
+            list[index].text = txt;
+            list[index].deadline = date;
+            
+            saveToCloud();
+            // 해당 리스트만 다시 렌더링
+            if(type === 'bigstone') renderTasks(type, cat);
+            else renderTasks(type, 'general');
+        };
+
+        window.cancelEdit = (type, cat, index) => {
+            // 원복 (다시 렌더링)
+            if(type === 'bigstone') renderTasks(type, cat);
+            else renderTasks(type, 'general');
+        };
+
+        // --- 만다라트 ---
         window.renderMandalart = function() {
             const grid = document.getElementById('mandalart-grid');
             if(grid.children.length === 0) createMandalartGrid(grid);
@@ -398,11 +467,9 @@
                 const subGrid = document.createElement('div');
                 const isCenter = (i === 4);
                 subGrid.className = `sub-grid sub-grid-${i} ${isCenter ? 'sub-grid-center' : ''}`;
-                
                 for(let j = 0; j < 9; j++) {
                     const cellWrapper = document.createElement('div');
                     cellWrapper.className = 'cell-wrapper';
-                    
                     const cell = document.createElement('textarea');
                     cell.className = 'grid-input';
                     cell.id = `mcell-${i}-${j}`;
@@ -459,7 +526,7 @@
             const inputEl = document.getElementById(`in-${t}-${c}`);
             inputEl.focus();
             
-            // [수정] 엔터키 저장 이벤트 추가
+            // 엔터키 저장 (추가 모드)
             inputEl.addEventListener('keydown', function(e) {
                 if(e.key === 'Enter') {
                     e.preventDefault();
@@ -473,7 +540,7 @@
             if(!txt) return;
             const task = { text: txt, deadline: document.getElementById(`date-${t}-${c}`).value, completed: false };
             
-            // [수정] 데이터 구조 안전성 확보
+            // 데이터 안전 초기화
             if (!allBigstoneData[window.currentYear]) {
                 allBigstoneData[window.currentYear] = { bigstones: {}, todos: {} };
             }
@@ -484,7 +551,7 @@
                 if(!d.bigstones[window.currentMonth][c]) d.bigstones[window.currentMonth][c]=[];
                 d.bigstones[window.currentMonth][c].push(task);
             } else {
-                if(!d.todos) d.todos = {}; // todos 객체가 없을 경우 생성
+                if(!d.todos) d.todos = {}; 
                 if(!d.todos[window.currentMonth]) d.todos[window.currentMonth]=[];
                 d.todos[window.currentMonth].push(task);
             }
