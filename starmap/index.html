@@ -353,7 +353,8 @@
   <div class="topbar">
     <!-- ★ 홈 버튼 -->
     <a id="homeBtn" href="../" class="topbar-link">🏠 홈</a>
-    <span id="syncStatus" title="Supabase 동기화 상태">☁️ 연결 중...</span>
+    <button id="loginBtn" style="display:none; background:rgba(110,168,255,0.2); color:#6ea8ff; border:1px solid rgba(110,168,255,0.4);">🔑 로그인</button>
+    <span id="syncStatus" title="Firebase 동기화 상태">☁️ 연결 중...</span>
     <button id="downloadBtn">다운로드</button>
     <button id="uploadBtn">업로드</button>
     <input type="file" id="uploadInput" accept="application/json,.json" style="display:none;">
@@ -376,55 +377,29 @@
     <div class="menu-item danger" id="btnDelete">🕳️ 삭제</div>
   </div>
 
-  <script>
+  <script type="module">
     // =============================================
-    // Supabase 설정 (프로젝트에 맞게 수정하세요)
+    // Firebase 설정 (빅스톤과 동일한 프로젝트)
     // =============================================
-    const SUPABASE_URL = 'https://dfeklapllluhgidcvgrj.supabase.co';         // 예: https://xxxx.supabase.co
-    const SUPABASE_ANON_KEY = 'sb_publishable_bV8gO3MBCDkIBXJdbn2hSw_jzHkBGw5';
-    const SUPABASE_USER_ID  = 'eundang';               // 고정 사용자 식별자
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
-    // =============================================
-    // Supabase REST API 헬퍼
-    // =============================================
-    const supabase = {
-      async load() {
-        try {
-          const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/starmap_data?user_id=eq.${SUPABASE_USER_ID}&select=data`,
-            { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-          );
-          if (!res.ok) throw new Error('load failed');
-          const rows = await res.json();
-          return rows.length > 0 ? rows[0].data : null;
-        } catch (e) {
-          console.warn('[Supabase] load 실패, localStorage 사용:', e);
-          return null;
-        }
-      },
-
-      async save(payload) {
-        try {
-          const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/starmap_data`,
-            {
-              method: 'POST',
-              headers: {
-                apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                Prefer: 'resolution=merge-duplicates'
-              },
-              body: JSON.stringify({ user_id: SUPABASE_USER_ID, data: payload, updated_at: new Date().toISOString() })
-            }
-          );
-          return res.ok;
-        } catch (e) {
-          console.warn('[Supabase] save 실패:', e);
-          return false;
-        }
-      }
+    const firebaseConfig = {
+      apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+      authDomain: "itnews-82b60.firebaseapp.com",
+      databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+      projectId: "itnews-82b60",
+      storageBucket: "itnews-82b60.firebasestorage.app",
+      messagingSenderId: "719267588761",
+      appId: "1:719267588761:web:3c4607cb799620f9446608"
     };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const fbDb  = getDatabase(fbApp);
+    const fbAuth = getAuth(fbApp);
+    const ALLOWED = "eundang@gmail.com";
+    let currentUserId = null;
 
     // =============================================
     // 동기화 상태 표시
@@ -433,6 +408,50 @@
     function setSyncStatus(state, msg) {
       syncEl.className = state;
       syncEl.textContent = msg;
+    }
+
+    // Firebase 인증
+    onAuthStateChanged(fbAuth, (user) => {
+      if (user && user.email.toLowerCase() === ALLOWED) {
+        currentUserId = user.uid;
+        document.getElementById('loginBtn').style.display = 'none';
+        setSyncStatus('saved', '✅ ' + user.displayName);
+        // Firebase에서 실시간 로드
+        onValue(ref(fbDb, `users/${currentUserId}/starmap`), (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            try {
+              const sanitized = ensureRootExists(val);
+              data = sanitized;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
+              updateGraph();
+              setSyncStatus('saved', '☁️ 동기화됨');
+            } catch(e) {
+              setSyncStatus('error', '⚠️ 데이터 오류');
+            }
+          } else {
+            setSyncStatus('saved', '☁️ 준비됨');
+          }
+        });
+      } else {
+        currentUserId = null;
+        document.getElementById('loginBtn').style.display = 'inline-flex';
+        setSyncStatus('offline', '☁️ 로그인 필요');
+        if (user) { alert("권한이 없는 계정입니다."); fbAuth.signOut(); }
+      }
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      signInWithPopup(fbAuth, new GoogleAuthProvider());
+    });
+
+    // Firebase 저장
+    function saveToCloud(payload) {
+      if (!currentUserId) return;
+      setSyncStatus('saving', '⏳ 저장 중...');
+      set(ref(fbDb, `users/${currentUserId}/starmap`), payload)
+        .then(() => setSyncStatus('saved', '☁️ 저장됨'))
+        .catch(() => setSyncStatus('error', '⚠️ 저장 실패'));
     }
 
     // =============================================
@@ -527,54 +546,19 @@
       };
     }
 
-    // localStorage + Supabase 동시 저장 (디바운스 2초)
+    // localStorage + Firebase 동시 저장 (디바운스 1.5초)
     function saveData() {
       const payload = serializeData();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 
-      // Supabase 저장은 2초 디바운스
       if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(async () => {
-        if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-          setSyncStatus('offline', '☁️ 오프라인');
-          return;
-        }
-        setSyncStatus('saving', '⏳ 저장 중...');
-        const ok = await supabase.save(payload);
-        if (ok) {
-          setSyncStatus('saved', '✅ 저장됨');
-          setTimeout(() => setSyncStatus('', '☁️ 동기화 완료'), 2000);
-        } else {
-          setSyncStatus('error', '⚠️ 저장 실패');
-        }
-      }, 2000);
+      saveTimer = setTimeout(() => {
+        saveToCloud(payload);
+      }, 1500);
     }
 
-    // 앱 초기화: localStorage로 즉시 시작 후 Supabase에서 최신 데이터 로드
+    // 앱 초기화: localStorage로 즉시 시작 (Firebase 데이터는 onAuthStateChanged에서 로드)
     let data = loadLocalData();
-
-    async function initFromSupabase() {
-      if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-        setSyncStatus('offline', '☁️ 로컬 전용');
-        return;
-      }
-      setSyncStatus('saving', '☁️ 불러오는 중...');
-      const remote = await supabase.load();
-      if (remote) {
-        try {
-          const sanitized = ensureRootExists(remote);
-          data = sanitized;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
-          updateGraph();
-          setSyncStatus('saved', '✅ 동기화 완료');
-          setTimeout(() => setSyncStatus('', '☁️ 준비됨'), 2000);
-        } catch (e) {
-          setSyncStatus('error', '⚠️ 원격 데이터 오류');
-        }
-      } else {
-        setSyncStatus('saved', '☁️ 준비됨');
-      }
-    }
 
     // =============================================
     // D3 그래프 로직 (원본 동일)
@@ -990,7 +974,6 @@
     // 초기 실행
     setDockAddMode();
     updateGraph();
-    initFromSupabase(); // Supabase에서 최신 데이터 로드
   </script>
 </body>
 </html>
