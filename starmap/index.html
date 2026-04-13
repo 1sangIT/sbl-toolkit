@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>별의 지도 · SBL v4 </title>
+  <title>별의 지도 · SBL V5</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
@@ -432,7 +432,7 @@
                   simulation.force("link").links(data.links);
                   pinRoot();
                   simulation.alpha(1).restart();
-                  updateGraph();
+                  updateGraph(true); // Firebase 로드 시엔 저장 안 함 (무한루프 방지)
                   setSyncStatus('saved', '☁️ 동기화됨');
                 } catch(e) {
                   setSyncStatus('error', '⚠️ 데이터 오류');
@@ -716,7 +716,7 @@
         .classed("highlighted", l => getNodeId(l.source) === focusedNode.id || getNodeId(l.target) === focusedNode.id);
     }
 
-    function updateGraph() {
+    function updateGraph(skipSave = false) {
       normalizeLinks();
       pinRoot();
 
@@ -764,7 +764,7 @@
         else { setDockAddMode(); }
       }
 
-      saveData();
+      if (!skipSave) saveData();
     }
 
     simulation.on("tick", () => {
