@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>별의 지도 · SBL_v3 </title>
+  <title>별의 지도 · SBL v4 </title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
@@ -353,7 +353,7 @@
   <div class="topbar">
     <!-- ★ 홈 버튼 -->
     <a id="homeBtn" href="../" class="topbar-link">🏠 홈</a>
-    <button id="loginBtn" style="display:none; background:rgba(110,168,255,0.2); color:#6ea8ff; border:1px solid rgba(110,168,255,0.4);">🔑 로그인</button>
+    <button id="loginBtn" style="background:rgba(110,168,255,0.2); color:#6ea8ff; border:1px solid rgba(110,168,255,0.4);">🔑 로그인</button>
     <span id="syncStatus" title="Firebase 동기화 상태">☁️ 연결 중...</span>
     <button id="downloadBtn">다운로드</button>
     <button id="uploadBtn">업로드</button>
@@ -382,7 +382,7 @@
     // Firebase 설정 (빅스톤과 동일한 프로젝트)
     // =============================================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+    import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -411,28 +411,37 @@
     }
 
     // Firebase 인증
+    let firebaseLoaded = false; // 중복 로드 방지
     onAuthStateChanged(fbAuth, (user) => {
       if (user && user.email.toLowerCase() === ALLOWED) {
         currentUserId = user.uid;
         document.getElementById('loginBtn').style.display = 'none';
         setSyncStatus('saved', '✅ ' + user.displayName);
-        // Firebase에서 실시간 로드
-        onValue(ref(fbDb, `users/${currentUserId}/starmap`), (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            try {
-              const sanitized = ensureRootExists(val);
-              data = sanitized;
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
-              updateGraph();
-              setSyncStatus('saved', '☁️ 동기화됨');
-            } catch(e) {
-              setSyncStatus('error', '⚠️ 데이터 오류');
-            }
-          } else {
-            setSyncStatus('saved', '☁️ 준비됨');
-          }
-        });
+        // Firebase에서 최초 1회만 로드 (onValue 실시간 구독 대신 get 사용)
+        if (!firebaseLoaded) {
+          firebaseLoaded = true;
+          get(ref(fbDb, `users/${currentUserId}/starmap`)).then((snapshot) => {
+              const val = snapshot.val();
+              if (val) {
+                try {
+                  const sanitized = ensureRootExists(val);
+                  data = sanitized;
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
+                  simulation.stop();
+                  simulation.nodes(data.nodes);
+                  simulation.force("link").links(data.links);
+                  pinRoot();
+                  simulation.alpha(1).restart();
+                  updateGraph();
+                  setSyncStatus('saved', '☁️ 동기화됨');
+                } catch(e) {
+                  setSyncStatus('error', '⚠️ 데이터 오류');
+                }
+              } else {
+                setSyncStatus('saved', '☁️ 준비됨');
+              }
+            });
+        }
       } else {
         currentUserId = null;
         document.getElementById('loginBtn').style.display = 'inline-flex';
