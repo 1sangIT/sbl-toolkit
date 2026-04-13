@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>별의 지도 · SBL v6 gpt </title>
+  <title>별의 지도 · SBL V7 </title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
@@ -398,8 +398,10 @@
     };
 
     const ALLOWED = "eundang@gmail.com";
-    const STORAGE_KEY = "starmap_data_v9";
+    const STORAGE_KEY = "starmap_data_v10";
     const CONNECT_RADIUS = 180;
+    const CLOUD_APPLY_COOLDOWN = 5000;
+    const CLOUD_SAVE_DEBOUNCE = 4000;
 
     const fbApp = initializeApp(firebaseConfig);
     const fbDb = getDatabase(fbApp);
@@ -414,6 +416,10 @@
     let focusedNode = null;
     let editingNode = null;
     let selectedNodeForMenu = null;
+
+    let isDragging = false;
+    let isEditingInput = false;
+    let lastInteractionAt = 0;
 
     const defaultData = {
       nodes: [
@@ -431,6 +437,14 @@
         { source: "g2", target: "p2", id: "l4" }
       ]
     };
+
+    function markUserInteraction() {
+      lastInteractionAt = Date.now();
+    }
+
+    function isUserBusy() {
+      return isDragging || isEditingInput || (Date.now() - lastInteractionAt < CLOUD_APPLY_COOLDOWN);
+    }
 
     function getNodeId(value) {
       return typeof value === "object" ? value.id : value;
@@ -557,7 +571,7 @@
       if (saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
         saveToCloud(payload);
-      }, 1200);
+      }, CLOUD_SAVE_DEBOUNCE);
     }
 
     onAuthStateChanged(fbAuth, (user) => {
@@ -588,6 +602,11 @@
 
             if (incomingJson === currentJson) {
               setSyncStatus("saved", "☁️ 동기화됨");
+              return;
+            }
+
+            if (isUserBusy()) {
+              setSyncStatus("saving", "✋ 편집 중...");
               return;
             }
 
@@ -624,6 +643,20 @@
 
     loginBtn.addEventListener("click", () => {
       signInWithPopup(fbAuth, new GoogleAuthProvider());
+    });
+
+    inputEl.addEventListener("focus", () => {
+      isEditingInput = true;
+      markUserInteraction();
+    });
+
+    inputEl.addEventListener("blur", () => {
+      isEditingInput = false;
+      markUserInteraction();
+    });
+
+    inputEl.addEventListener("input", () => {
+      markUserInteraction();
     });
 
     const nodeConfig = {
@@ -804,7 +837,7 @@
       nodeElements.select("circle")
         .attr("r", d => nodeConfig[d.type]?.size || 8)
         .attr("fill", d => nodeConfig[d.type]?.color || "#cbd5e1")
-        .attr("filter", d => `url(#glow-${d.type in nodeConfig ? d.type : 'dust'})`);
+        .attr("filter", d => `url(#glow-${d.type in nodeConfig ? d.type : "dust"})`);
 
       nodeElements.select("text")
         .attr("dy", d => (nodeConfig[d.type]?.size || 8) + 20)
@@ -846,6 +879,7 @@
 
     function handleNodeClick(event, d) {
       if (event.defaultPrevented) return;
+      markUserInteraction();
       hideContextMenu();
       focusedNode = d;
       refreshFocusUI();
@@ -866,6 +900,9 @@
     });
 
     function dragstarted(event, d) {
+      isDragging = true;
+      markUserInteraction();
+
       if (!event.active) simulation.alphaTarget(0);
 
       hideContextMenu();
@@ -881,6 +918,8 @@
     }
 
     function dragged(event, d) {
+      markUserInteraction();
+
       d.fx = event.x;
       d.fy = event.y;
 
@@ -973,11 +1012,16 @@
         d.fy = null;
       }
 
+      isDragging = false;
+      markUserInteraction();
+
       updateGraph();
       simulation.alpha(0.35).restart();
     }
 
     function disconnectNodeById(nodeId) {
+      markUserInteraction();
+
       const node = data.nodes.find(n => n.id === nodeId);
       if (!node || node.type === "root") return;
 
@@ -997,6 +1041,8 @@
     }
 
     function deleteNodeById(nodeId) {
+      markUserInteraction();
+
       const node = data.nodes.find(n => n.id === nodeId);
       if (!node || node.type === "root") return;
 
@@ -1050,6 +1096,7 @@
 
     document.getElementById("btnEdit").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
+      markUserInteraction();
       focusedNode = selectedNodeForMenu;
       refreshFocusUI();
       setDockEditMode(selectedNodeForMenu);
@@ -1058,6 +1105,7 @@
 
     document.getElementById("btnComplete").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
+      markUserInteraction();
       selectedNodeForMenu.type = "supernova";
       updateGraph();
       hideContextMenu();
@@ -1078,6 +1126,8 @@
     });
 
     function addOrSaveThought() {
+      markUserInteraction();
+
       const text = inputEl.value.trim();
       if (!text) return;
 
@@ -1140,6 +1190,7 @@
           clearFocus();
           setDockAddMode();
           hideContextMenu();
+          markUserInteraction();
           updateGraph();
         } catch (error) {
           alert("업로드 실패: 올바른 별 지도 JSON 파일인지 확인해주세요.");
@@ -1164,6 +1215,7 @@
     });
 
     cancelEditBtn.addEventListener("click", () => {
+      markUserInteraction();
       clearFocus();
       setDockAddMode();
     });
