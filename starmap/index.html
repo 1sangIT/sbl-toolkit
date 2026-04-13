@@ -80,7 +80,6 @@
       background: rgba(255,255,255,0.14);
     }
 
-    /* 홈 버튼 */
     #homeBtn {
       background: rgba(110, 168, 255, 0.15) !important;
       color: #6ea8ff !important;
@@ -89,12 +88,17 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
+      padding: 9px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
     }
+
     #homeBtn:hover {
       background: rgba(110, 168, 255, 0.25) !important;
     }
 
-    /* Supabase 저장 상태 표시 */
     #syncStatus {
       font-size: 12px;
       color: rgba(255,255,255,0.5);
@@ -102,6 +106,7 @@
       padding: 0 4px;
       transition: color 0.3s;
     }
+
     #syncStatus.saving { color: #FFD700; }
     #syncStatus.saved  { color: #7CFF6B; }
     #syncStatus.error  { color: #ff6b6b; }
@@ -295,7 +300,8 @@
         gap: 8px;
       }
 
-      .topbar button, #homeBtn {
+      .topbar button,
+      #homeBtn {
         font-size: 13px;
         padding: 8px 12px;
       }
@@ -351,8 +357,7 @@
   </div>
 
   <div class="topbar">
-    <!-- ★ 홈 버튼 -->
-    <a id="homeBtn" href="../" class="topbar-link">🏠 홈</a>
+    <a id="homeBtn" href="../">🏠 홈</a>
     <button id="loginBtn" style="display:none; background:rgba(110,168,255,0.2); color:#6ea8ff; border:1px solid rgba(110,168,255,0.4);">🔑 로그인</button>
     <span id="syncStatus" title="Firebase 동기화 상태">☁️ 연결 중...</span>
     <button id="downloadBtn">다운로드</button>
@@ -378,13 +383,13 @@
   </div>
 
   <script type="module">
-    // =============================================
-    // Firebase 설정 (빅스톤과 동일한 프로젝트)
-    // =============================================
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
+    // =========================================================
+    // Firebase 설정: 업로드하신 코드 그대로 유지
+    // =========================================================
     const firebaseConfig = {
       apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
       authDomain: "itnews-82b60.firebaseapp.com",
@@ -396,71 +401,21 @@
     };
 
     const fbApp = initializeApp(firebaseConfig);
-    const fbDb  = getDatabase(fbApp);
+    const fbDb = getDatabase(fbApp);
     const fbAuth = getAuth(fbApp);
     const ALLOWED = "eundang@gmail.com";
-    let currentUserId = null;
 
-    // =============================================
-    // 동기화 상태 표시
-    // =============================================
-    const syncEl = document.getElementById('syncStatus');
-    function setSyncStatus(state, msg) {
-      syncEl.className = state;
-      syncEl.textContent = msg;
-    }
-
-    // Firebase 인증
-    onAuthStateChanged(fbAuth, (user) => {
-      if (user && user.email.toLowerCase() === ALLOWED) {
-        currentUserId = user.uid;
-        document.getElementById('loginBtn').style.display = 'none';
-        setSyncStatus('saved', '✅ ' + user.displayName);
-        // Firebase에서 실시간 로드
-        onValue(ref(fbDb, `users/${currentUserId}/starmap`), (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            try {
-              const sanitized = ensureRootExists(val);
-              data = sanitized;
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
-              updateGraph();
-              setSyncStatus('saved', '☁️ 동기화됨');
-            } catch(e) {
-              setSyncStatus('error', '⚠️ 데이터 오류');
-            }
-          } else {
-            setSyncStatus('saved', '☁️ 준비됨');
-          }
-        });
-      } else {
-        currentUserId = null;
-        document.getElementById('loginBtn').style.display = 'inline-flex';
-        setSyncStatus('offline', '☁️ 로그인 필요');
-        if (user) { alert("권한이 없는 계정입니다."); fbAuth.signOut(); }
-      }
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', () => {
-      signInWithPopup(fbAuth, new GoogleAuthProvider());
-    });
-
-    // Firebase 저장
-    function saveToCloud(payload) {
-      if (!currentUserId) return;
-      setSyncStatus('saving', '⏳ 저장 중...');
-      set(ref(fbDb, `users/${currentUserId}/starmap`), payload)
-        .then(() => setSyncStatus('saved', '☁️ 저장됨'))
-        .catch(() => setSyncStatus('error', '⚠️ 저장 실패'));
-    }
-
-    // =============================================
-    // 기존 로직 (localStorage 병행)
-    // =============================================
-    const STORAGE_KEY = 'starmap_data_v7';
+    // =========================================================
+    // 공통 상태
+    // =========================================================
+    const STORAGE_KEY = 'starmap_data_v8';
     const CONNECT_RADIUS = 180;
-    let frozenNodes = [];
+
+    let currentUserId = null;
+    let cloudUnsubscribe = null;
+    let suppressCloudSave = false;
     let saveTimer = null;
+    let frozenNodes = [];
 
     const defaultData = {
       nodes: [
@@ -488,23 +443,30 @@
     }
 
     function ensureRootExists(rawData) {
-      const hasRoot = rawData.nodes.some(n => n.id === 'root');
+      const safe = rawData && typeof rawData === "object" ? rawData : { nodes: [], links: [] };
+      safe.nodes = Array.isArray(safe.nodes) ? safe.nodes : [];
+      safe.links = Array.isArray(safe.links) ? safe.links : [];
+
+      const hasRoot = safe.nodes.some(n => n.id === 'root');
       if (!hasRoot) {
-        rawData.nodes.unshift({ id: 'root', type: 'root', label: '나의 우주' });
+        safe.nodes.unshift({ id: 'root', type: 'root', label: '나의 우주' });
       }
-      rawData.nodes = rawData.nodes.map(n => {
+
+      safe.nodes = safe.nodes.map(n => {
         if (n.id === 'root') {
           return { ...n, type: 'root', label: n.label || '나의 우주' };
         }
         return n;
       });
-      return rawData;
+
+      return safe;
     }
 
     function sanitizeImportedData(raw) {
       if (!raw || !Array.isArray(raw.nodes) || !Array.isArray(raw.links)) {
         throw new Error('올바른 JSON 형식이 아닙니다.');
       }
+
       const nodes = raw.nodes
         .filter(n => n && typeof n.id === 'string')
         .map(n => ({
@@ -514,7 +476,9 @@
           x: typeof n.x === 'number' ? n.x : undefined,
           y: typeof n.y === 'number' ? n.y : undefined
         }));
+
       const nodeIds = new Set(nodes.map(n => n.id));
+
       const links = raw.links
         .map((l, index) => ({
           id: typeof l.id === 'string' ? l.id : `import_link_${index}_${Date.now()}`,
@@ -523,10 +487,10 @@
         }))
         .filter(l => typeof l.source === 'string' && typeof l.target === 'string')
         .filter(l => nodeIds.has(l.source) && nodeIds.has(l.target) && l.source !== l.target);
+
       return ensureRootExists({ nodes, links });
     }
 
-    // localStorage에서 먼저 로드 (즉시)
     function loadLocalData() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -539,30 +503,140 @@
       return deepCopy(defaultData);
     }
 
+    let data = loadLocalData();
+
     function serializeData() {
       return {
-        nodes: data.nodes.map(n => ({ id: n.id, type: n.type, label: n.label, x: n.x, y: n.y })),
-        links: data.links.map(l => ({ id: l.id, source: getNodeId(l.source), target: getNodeId(l.target) }))
+        nodes: data.nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          label: n.label,
+          x: n.x,
+          y: n.y
+        })),
+        links: data.links.map(l => ({
+          id: l.id,
+          source: getNodeId(l.source),
+          target: getNodeId(l.target)
+        }))
       };
     }
 
-    // localStorage + Firebase 동시 저장 (디바운스 1.5초)
+    // =========================================================
+    // UI 요소
+    // =========================================================
+    const syncEl = document.getElementById('syncStatus');
+    const loginBtn = document.getElementById('loginBtn');
+    const inputEl = document.getElementById("thoughtInput");
+    const addBtn = document.getElementById("addThoughtBtn");
+    const disconnectBtn = document.getElementById("disconnectBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const contextMenu = document.getElementById("contextMenu");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadInput = document.getElementById("uploadInput");
+
+    function setSyncStatus(state, msg) {
+      syncEl.className = state;
+      syncEl.textContent = msg;
+    }
+
+    // =========================================================
+    // Firebase 인증/동기화
+    // =========================================================
+    function saveToCloud(payload) {
+      if (!currentUserId) return Promise.resolve();
+      setSyncStatus('saving', '⏳ 저장 중...');
+      return set(ref(fbDb, `users/${currentUserId}/starmap`), payload)
+        .then(() => setSyncStatus('saved', '☁️ 저장됨'))
+        .catch((err) => {
+          console.error(err);
+          setSyncStatus('error', '⚠️ 저장 실패');
+        });
+    }
+
     function saveData() {
       const payload = serializeData();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 
+      if (suppressCloudSave || !currentUserId) return;
+
       if (saveTimer) clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
         saveToCloud(payload);
-      }, 1500);
+      }, 1200);
     }
 
-    // 앱 초기화: localStorage로 즉시 시작 (Firebase 데이터는 onAuthStateChanged에서 로드)
-    let data = loadLocalData();
+    onAuthStateChanged(fbAuth, (user) => {
+      if (cloudUnsubscribe) {
+        cloudUnsubscribe();
+        cloudUnsubscribe = null;
+      }
 
-    // =============================================
-    // D3 그래프 로직 (원본 동일)
-    // =============================================
+      if (user && user.email && user.email.toLowerCase() === ALLOWED) {
+        currentUserId = user.uid;
+        loginBtn.style.display = 'none';
+        setSyncStatus('saved', `✅ ${user.displayName || user.email}`);
+
+        const cloudRef = ref(fbDb, `users/${currentUserId}/starmap`);
+
+        cloudUnsubscribe = onValue(cloudRef, (snapshot) => {
+          const val = snapshot.val();
+
+          if (!val) {
+            setSyncStatus('saved', '☁️ 준비됨');
+            return;
+          }
+
+          try {
+            const sanitized = sanitizeImportedData(val);
+            const incomingJson = JSON.stringify(sanitized);
+            const currentJson = JSON.stringify(serializeData());
+
+            if (incomingJson === currentJson) {
+              setSyncStatus('saved', '☁️ 동기화됨');
+              return;
+            }
+
+            suppressCloudSave = true;
+            data = sanitized;
+            clearFocus();
+            setDockAddMode();
+            hideContextMenu();
+            updateGraph();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
+            setSyncStatus('saved', '☁️ 동기화됨');
+          } catch (e) {
+            console.error(e);
+            setSyncStatus('error', '⚠️ 데이터 오류');
+          } finally {
+            suppressCloudSave = false;
+          }
+        }, (error) => {
+          console.error(error);
+          setSyncStatus('error', '⚠️ 동기화 실패');
+        });
+
+      } else {
+        currentUserId = null;
+        loginBtn.style.display = 'inline-flex';
+        setSyncStatus('offline', '☁️ 로그인 필요');
+
+        if (user) {
+          alert("권한이 없는 계정입니다.");
+          signOut(fbAuth);
+        }
+      }
+    });
+
+    loginBtn.addEventListener('click', () => {
+      signInWithPopup(fbAuth, new GoogleAuthProvider());
+    });
+
+    // =========================================================
+    // D3 별 지도
+    // =========================================================
     const nodeConfig = {
       root:      { size: 40, color: "#ffffff" },
       goal:      { size: 24, color: "#8BFFB0" },
@@ -574,19 +648,21 @@
     const svg = d3.select("#starmap");
     let width = window.innerWidth;
     let height = window.innerHeight;
-
     svg.attr("width", width).attr("height", height);
 
     const defs = svg.append("defs");
-
     Object.keys(nodeConfig).forEach(type => {
       const filter = defs.append("filter")
         .attr("id", `glow-${type}`)
-        .attr("x", "-50%").attr("y", "-50%")
-        .attr("width", "200%").attr("height", "200%");
+        .attr("x", "-50%")
+        .attr("y", "-50%")
+        .attr("width", "200%")
+        .attr("height", "200%");
+
       filter.append("feGaussianBlur")
         .attr("stdDeviation", type === 'root' ? "15" : type === 'supernova' ? "12" : "6")
         .attr("result", "coloredBlur");
+
       const feMerge = filter.append("feMerge");
       feMerge.append("feMergeNode").attr("in", "coloredBlur");
       feMerge.append("feMergeNode").attr("in", "SourceGraphic");
@@ -596,7 +672,9 @@
 
     const zoom = d3.zoom()
       .scaleExtent([0.2, 4])
-      .on("zoom", (event) => { g.attr("transform", event.transform); });
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
 
     svg.call(zoom);
     svg.on("dblclick.zoom", null);
@@ -624,16 +702,6 @@
     let editingNode = null;
     let selectedNodeForMenu = null;
 
-    const inputEl = document.getElementById("thoughtInput");
-    const addBtn = document.getElementById("addThoughtBtn");
-    const disconnectBtn = document.getElementById("disconnectBtn");
-    const deleteBtn = document.getElementById("deleteBtn");
-    const cancelEditBtn = document.getElementById("cancelEditBtn");
-    const contextMenu = document.getElementById("contextMenu");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const uploadInput = document.getElementById("uploadInput");
-
     function normalizeLinks() {
       data.links = data.links.filter(link => {
         const sourceId = getNodeId(link.source);
@@ -646,7 +714,10 @@
 
     function pinRoot() {
       const rootNode = data.nodes.find(n => n.id === "root");
-      if (rootNode) { rootNode.fx = width / 2; rootNode.fy = height / 2; }
+      if (rootNode) {
+        rootNode.fx = width / 2;
+        rootNode.fy = height / 2;
+      }
     }
 
     function hasAnyLink(nodeId) {
@@ -664,11 +735,16 @@
     }
 
     function setDockEditMode(node) {
-      if (!node) { setDockAddMode(); return; }
+      if (!node) {
+        setDockAddMode();
+        return;
+      }
+
       editingNode = node;
       inputEl.value = node.label || "";
       inputEl.placeholder = "선택한 별 이름을 수정하세요";
       addBtn.textContent = "수정 저장";
+
       if (node.id === 'root') {
         disconnectBtn.style.display = "none";
         deleteBtn.style.display = "none";
@@ -676,6 +752,7 @@
         disconnectBtn.style.display = hasAnyLink(node.id) ? "inline-flex" : "none";
         deleteBtn.style.display = "inline-flex";
       }
+
       cancelEditBtn.style.display = "inline-flex";
       inputEl.focus();
       inputEl.select();
@@ -692,16 +769,20 @@
         linkElements.classed("dimmed", false).classed("highlighted", false);
         return;
       }
+
       const connectedIds = new Set([focusedNode.id]);
+
       data.links.forEach(l => {
         const sourceId = getNodeId(l.source);
         const targetId = getNodeId(l.target);
         if (sourceId === focusedNode.id) connectedIds.add(targetId);
         if (targetId === focusedNode.id) connectedIds.add(sourceId);
       });
+
       nodeElements
         .classed("dimmed", node => !connectedIds.has(node.id))
         .classed("selected", node => node.id === focusedNode.id);
+
       linkElements
         .classed("dimmed", l => getNodeId(l.source) !== focusedNode.id && getNodeId(l.target) !== focusedNode.id)
         .classed("highlighted", l => getNodeId(l.source) === focusedNode.id || getNodeId(l.target) === focusedNode.id);
@@ -720,11 +801,14 @@
       nodeElements.exit().remove();
 
       const nodeEnter = nodeElements.enter()
-        .append("g").attr("class", "node")
-        .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+        .append("g")
+        .attr("class", "node")
+        .call(
+          d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended)
+        );
 
       nodeEnter.append("circle");
       nodeEnter.append("text").attr("text-anchor", "middle");
@@ -741,7 +825,9 @@
         .text(d => d.label)
         .attr("fill", d => d.type === 'supernova' ? '#FFD700' : 'rgba(255,255,255,0.92)');
 
-      nodeElements.on("click", handleNodeClick).on("contextmenu", handleRightClick);
+      nodeElements
+        .on("click", handleNodeClick)
+        .on("contextmenu", handleRightClick);
 
       simulation.nodes(data.nodes);
       simulation.force("link").links(data.links);
@@ -751,16 +837,24 @@
 
       if (editingNode) {
         const freshNode = data.nodes.find(n => n.id === editingNode.id);
-        if (freshNode) { editingNode = freshNode; setDockEditMode(freshNode); }
-        else { setDockAddMode(); }
+        if (freshNode) {
+          editingNode = freshNode;
+          setDockEditMode(freshNode);
+        } else {
+          setDockAddMode();
+        }
       }
 
       saveData();
     }
 
     simulation.on("tick", () => {
-      linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+      linkElements
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
       nodeElements.attr("transform", d => `translate(${d.x},${d.y})`);
     });
 
@@ -774,32 +868,59 @@
 
     svg.on("click", (event) => {
       if (event.target.tagName === 'svg') {
-        hideContextMenu(); clearFocus(); setDockAddMode();
+        hideContextMenu();
+        clearFocus();
+        setDockAddMode();
       }
     });
 
-    svg.on("contextmenu", (event) => { event.preventDefault(); hideContextMenu(); });
+    svg.on("contextmenu", (event) => {
+      event.preventDefault();
+      hideContextMenu();
+    });
 
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0);
+
       hideContextMenu();
-      d.fx = d.x; d.fy = d.y;
+
+      d.fx = d.x;
+      d.fy = d.y;
+
       frozenNodes = data.nodes.filter(n => n.id !== d.id);
-      frozenNodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
+      frozenNodes.forEach(n => {
+        n.fx = n.x;
+        n.fy = n.y;
+      });
     }
 
     function dragged(event, d) {
-      d.fx = event.x; d.fy = event.y;
-      let targetNode = null, minDistance = Infinity;
+      d.fx = event.x;
+      d.fy = event.y;
+
+      let targetNode = null;
+      let minDistance = Infinity;
+
       data.nodes.forEach(n => {
         if (n.id !== d.id) {
-          const dx = n.x - d.fx, dy = n.y - d.fy;
+          const dx = n.x - d.fx;
+          const dy = n.y - d.fy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < CONNECT_RADIUS && dist < minDistance) { minDistance = dist; targetNode = n; }
+
+          if (dist < CONNECT_RADIUS && dist < minDistance) {
+            minDistance = dist;
+            targetNode = n;
+          }
         }
       });
+
       if (targetNode) {
-        tempLink.attr("x1", d.fx).attr("y1", d.fy).attr("x2", targetNode.x).attr("y2", targetNode.y).style("display", "block");
+        tempLink
+          .attr("x1", d.fx)
+          .attr("y1", d.fy)
+          .attr("x2", targetNode.x)
+          .attr("y2", targetNode.y)
+          .style("display", "block");
       } else {
         tempLink.style("display", "none");
       }
@@ -807,34 +928,64 @@
 
     function dragended(event, d) {
       tempLink.style("display", "none");
-      let targetNode = null, minDistance = Infinity;
+
+      let targetNode = null;
+      let minDistance = Infinity;
+
       data.nodes.forEach(n => {
         if (n.id !== d.id) {
-          const dx = n.x - d.fx, dy = n.y - d.fy;
+          const dx = n.x - d.fx;
+          const dy = n.y - d.fy;
           const distance = Math.sqrt(dx * dx + dy * dy);
-          if (distance < CONNECT_RADIUS && distance < minDistance) { minDistance = distance; targetNode = n; }
+
+          if (distance < CONNECT_RADIUS && distance < minDistance) {
+            minDistance = distance;
+            targetNode = n;
+          }
         }
       });
 
       if (targetNode) {
         const linkExists = data.links.some(l => {
-          const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
-          return (sourceId === d.id && targetId === targetNode.id) || (targetId === d.id && sourceId === targetNode.id);
+          const sourceId = getNodeId(l.source);
+          const targetId = getNodeId(l.target);
+          return (
+            (sourceId === d.id && targetId === targetNode.id) ||
+            (targetId === d.id && sourceId === targetNode.id)
+          );
         });
+
         if (!linkExists) {
-          data.links.push({ id: `l_${Date.now()}`, source: d.id, target: targetNode.id });
-          if (d.type === 'dust') d.type = targetNode.type === 'root' ? 'goal' : 'task';
+          data.links.push({
+            id: `l_${Date.now()}`,
+            source: d.id,
+            target: targetNode.id
+          });
+
+          if (d.type === 'dust') {
+            d.type = targetNode.type === 'root' ? 'goal' : 'task';
+          }
         }
       }
 
       frozenNodes.forEach(n => {
-        if (n.id === 'root') { n.fx = width / 2; n.fy = height / 2; }
-        else { n.fx = null; n.fy = null; }
+        if (n.id === 'root') {
+          n.fx = width / 2;
+          n.fy = height / 2;
+        } else {
+          n.fx = null;
+          n.fy = null;
+        }
       });
       frozenNodes = [];
 
-      if (d.id === 'root') { d.fx = width / 2; d.fy = height / 2; }
-      else { d.fx = null; d.fy = null; }
+      if (d.id === 'root') {
+        d.fx = width / 2;
+        d.fy = height / 2;
+      } else {
+        d.fx = null;
+        d.fy = null;
+      }
 
       updateGraph();
       simulation.alpha(0.35).restart();
@@ -843,11 +994,17 @@
     function disconnectNodeById(nodeId) {
       const node = data.nodes.find(n => n.id === nodeId);
       if (!node || node.type === 'root') return;
+
       data.links = data.links.filter(l => {
-        const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
+        const sourceId = getNodeId(l.source);
+        const targetId = getNodeId(l.target);
         return sourceId !== nodeId && targetId !== nodeId;
       });
-      if (node.type !== 'supernova') node.type = 'dust';
+
+      if (node.type !== 'supernova') {
+        node.type = 'dust';
+      }
+
       focusedNode = node;
       updateGraph();
       setDockEditMode(node);
@@ -856,73 +1013,116 @@
     function deleteNodeById(nodeId) {
       const node = data.nodes.find(n => n.id === nodeId);
       if (!node || node.type === 'root') return;
+
       data.nodes = data.nodes.filter(n => n.id !== nodeId);
       data.links = data.links.filter(l => {
-        const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
+        const sourceId = getNodeId(l.source);
+        const targetId = getNodeId(l.target);
         return sourceId !== nodeId && targetId !== nodeId;
       });
+
       if (focusedNode && focusedNode.id === nodeId) focusedNode = null;
       if (editingNode && editingNode.id === nodeId) editingNode = null;
-      updateGraph(); clearFocus(); setDockAddMode();
+
+      updateGraph();
+      clearFocus();
+      setDockAddMode();
     }
 
     function showContextMenu(x, y, d) {
       if (!d || d.type === 'root') return;
+
       selectedNodeForMenu = d;
       contextMenu.style.display = "flex";
-      const menuWidth = 190, menuHeight = 220;
-      let left = x, top = y;
+
+      const menuWidth = 190;
+      const menuHeight = 220;
+
+      let left = x;
+      let top = y;
+
       if (left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
       if (top + menuHeight > window.innerHeight) top = window.innerHeight - menuHeight - 8;
+
       contextMenu.style.left = `${Math.max(8, left)}px`;
       contextMenu.style.top = `${Math.max(8, top)}px`;
     }
 
-    function hideContextMenu() { contextMenu.style.display = "none"; selectedNodeForMenu = null; }
+    function hideContextMenu() {
+      contextMenu.style.display = "none";
+      selectedNodeForMenu = null;
+    }
 
     function handleRightClick(event, d) {
       if (d.id === 'root') return;
-      event.preventDefault(); event.stopPropagation();
+      event.preventDefault();
+      event.stopPropagation();
       showContextMenu(event.pageX, event.pageY, d);
     }
 
-    contextMenu.addEventListener("pointerdown", (e) => e.stopPropagation());
+    contextMenu.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+    });
 
     document.getElementById("btnEdit").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
       focusedNode = selectedNodeForMenu;
-      refreshFocusUI(); setDockEditMode(selectedNodeForMenu); hideContextMenu();
+      refreshFocusUI();
+      setDockEditMode(selectedNodeForMenu);
+      hideContextMenu();
     });
 
     document.getElementById("btnComplete").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
-      selectedNodeForMenu.type = 'supernova'; updateGraph(); hideContextMenu();
+      selectedNodeForMenu.type = 'supernova';
+      updateGraph();
+      hideContextMenu();
     });
 
     document.getElementById("btnDisconnect").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
-      const targetId = selectedNodeForMenu.id; hideContextMenu(); disconnectNodeById(targetId);
+      const targetId = selectedNodeForMenu.id;
+      hideContextMenu();
+      disconnectNodeById(targetId);
     });
 
     document.getElementById("btnDelete").addEventListener("click", () => {
       if (!selectedNodeForMenu) return;
-      const targetId = selectedNodeForMenu.id; hideContextMenu(); deleteNodeById(targetId);
+      const targetId = selectedNodeForMenu.id;
+      hideContextMenu();
+      deleteNodeById(targetId);
     });
 
     function addOrSaveThought() {
       const text = inputEl.value.trim();
       if (!text) return;
+
       if (editingNode) {
-        editingNode.label = text; updateGraph(); setDockEditMode(editingNode); return;
+        editingNode.label = text;
+        updateGraph();
+        setDockEditMode(editingNode);
+        return;
       }
+
       const t = d3.zoomTransform(svg.node());
-      const centerX = t.invertX(width / 2), centerY = t.invertY(height / 2);
-      const angle = Math.random() * Math.PI * 2, radius = 100 + Math.random() * 200;
+      const centerX = t.invertX(width / 2);
+      const centerY = t.invertY(height / 2);
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 100 + Math.random() * 200;
+
       const newNode = {
-        id: "node_" + Date.now(), type: "dust", label: text,
-        x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius
+        id: "node_" + Date.now(),
+        type: "dust",
+        label: text,
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius
       };
-      data.nodes.push(newNode); updateGraph(); setDockAddMode(); inputEl.focus();
+
+      data.nodes.push(newNode);
+      updateGraph();
+      setDockAddMode();
+      inputEl.focus();
     }
 
     function exportData() {
@@ -930,48 +1130,94 @@
       const payload = serializeData();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const now = new Date(), pad = (v) => String(v).padStart(2, '0');
-      const filename = `starmap-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+
+      const now = new Date();
+      const pad = (v) => String(v).padStart(2, '0');
+      const filename = `starmap-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+
       const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       URL.revokeObjectURL(url);
     }
 
     function importDataFromFile(file) {
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
           const parsed = JSON.parse(event.target.result);
           const sanitized = sanitizeImportedData(parsed);
-          data = sanitized; clearFocus(); setDockAddMode(); hideContextMenu(); updateGraph();
+          data = sanitized;
+          clearFocus();
+          setDockAddMode();
+          hideContextMenu();
+          updateGraph();
         } catch (error) {
-          alert('업로드 실패: 올바른 별 지도 JSON 파일인지 확인해주세요.'); console.error(error);
-        } finally { uploadInput.value = ''; }
+          alert('업로드 실패: 올바른 별 지도 JSON 파일인지 확인해주세요.');
+          console.error(error);
+        } finally {
+          uploadInput.value = '';
+        }
       };
       reader.readAsText(file);
     }
 
     addBtn.addEventListener("click", addOrSaveThought);
-    disconnectBtn.addEventListener("click", () => { if (!editingNode || editingNode.id === 'root') return; disconnectNodeById(editingNode.id); });
-    deleteBtn.addEventListener("click", () => { if (!editingNode || editingNode.id === 'root') return; deleteNodeById(editingNode.id); });
-    cancelEditBtn.addEventListener("click", () => { clearFocus(); setDockAddMode(); });
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); addOrSaveThought(); }
-      if (e.key === "Escape") { e.preventDefault(); clearFocus(); setDockAddMode(); }
-    });
-    downloadBtn.addEventListener("click", exportData);
-    uploadBtn.addEventListener("click", () => uploadInput.click());
-    uploadInput.addEventListener("change", (e) => { const file = e.target.files?.[0]; importDataFromFile(file); });
-    window.addEventListener("resize", () => {
-      width = window.innerWidth; height = window.innerHeight;
-      svg.attr("width", width).attr("height", height);
-      simulation.force("center", d3.forceCenter(width / 2, height / 2));
-      pinRoot(); simulation.alpha(0.3).restart(); saveData();
+
+    disconnectBtn.addEventListener("click", () => {
+      if (!editingNode || editingNode.id === 'root') return;
+      disconnectNodeById(editingNode.id);
     });
 
-    // 초기 실행
+    deleteBtn.addEventListener("click", () => {
+      if (!editingNode || editingNode.id === 'root') return;
+      deleteNodeById(editingNode.id);
+    });
+
+    cancelEditBtn.addEventListener("click", () => {
+      clearFocus();
+      setDockAddMode();
+    });
+
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addOrSaveThought();
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearFocus();
+        setDockAddMode();
+      }
+    });
+
+    downloadBtn.addEventListener("click", exportData);
+
+    uploadBtn.addEventListener("click", () => {
+      uploadInput.click();
+    });
+
+    uploadInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      importDataFromFile(file);
+    });
+
+    window.addEventListener("resize", () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      svg.attr("width", width).attr("height", height);
+      simulation.force("center", d3.forceCenter(width / 2, height / 2));
+      pinRoot();
+      simulation.alpha(0.3).restart();
+      saveData();
+    });
+
     setDockAddMode();
     updateGraph();
   </script>
