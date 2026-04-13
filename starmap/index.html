@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>별의 지도 · SBL</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #030508;
+      --text: #edf5ff;
+      --accent: #7CFF6B;
+      --danger: #ff6b6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 50% 50%, rgba(124, 255, 107, 0.05), transparent 50%),
+        radial-gradient(circle at 20% 30%, rgba(125, 211, 252, 0.05), transparent 40%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      overflow: hidden;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    #starmap {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #starmap:active {
+      cursor: grabbing;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 30;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(10, 15, 25, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    }
+
+    .topbar button {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.92);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 9px 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: 0.2s ease;
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
+
+    .topbar button:hover {
+      background: rgba(255,255,255,0.14);
+    }
+
+    /* 홈 버튼 */
+    #homeBtn {
+      background: rgba(110, 168, 255, 0.15) !important;
+      color: #6ea8ff !important;
+      border: 1px solid rgba(110, 168, 255, 0.3) !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    #homeBtn:hover {
+      background: rgba(110, 168, 255, 0.25) !important;
+    }
+
+    /* Supabase 저장 상태 표시 */
+    #syncStatus {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      white-space: nowrap;
+      padding: 0 4px;
+      transition: color 0.3s;
+    }
+    #syncStatus.saving { color: #FFD700; }
+    #syncStatus.saved  { color: #7CFF6B; }
+    #syncStatus.error  { color: #ff6b6b; }
+    #syncStatus.offline { color: rgba(255,255,255,0.3); }
+
+    .node {
+      cursor: pointer;
+    }
+
+    .node circle {
+      transition: filter 0.25s ease, fill 0.25s ease, r 0.25s ease, opacity 0.25s ease, stroke 0.25s ease;
+    }
+
+    .node text {
+      font-size: 14px;
+      font-weight: 500;
+      fill: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+      transition: opacity 0.25s ease;
+      pointer-events: auto;
+    }
+
+    .node.dimmed circle {
+      opacity: 0.14;
+      filter: none !important;
+    }
+
+    .node.dimmed text {
+      opacity: 0.18;
+    }
+
+    .node.selected circle {
+      stroke: rgba(255,255,255,0.9);
+      stroke-width: 2.5px;
+    }
+
+    .link {
+      stroke: rgba(148, 163, 184, 0.22);
+      stroke-width: 2px;
+      transition: stroke-opacity 0.25s ease, stroke 0.25s ease;
+    }
+
+    .link.dimmed {
+      stroke-opacity: 0.04;
+    }
+
+    .link.highlighted {
+      stroke: rgba(125, 211, 252, 0.85);
+      stroke-width: 3px;
+    }
+
+    .capture-dock {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(10, 15, 25, 0.84);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 14px 18px;
+      border-radius: 40px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      width: 920px;
+      max-width: 94%;
+      z-index: 20;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .capture-dock input {
+      flex: 1 1 320px;
+      min-width: 220px;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .capture-dock input::placeholder {
+      color: rgba(255,255,255,0.45);
+    }
+
+    .dock-btn {
+      background: rgba(124, 255, 107, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(124, 255, 107, 0.3);
+      padding: 10px 16px;
+      border-radius: 18px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.2s;
+      white-space: nowrap;
+      touch-action: manipulation;
+    }
+
+    .dock-btn:hover {
+      filter: brightness(1.12);
+    }
+
+    .dock-btn.secondary {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.88);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .dock-btn.warning {
+      background: rgba(125, 211, 252, 0.12);
+      color: #7DD3FC;
+      border: 1px solid rgba(125, 211, 252, 0.28);
+    }
+
+    .dock-btn.danger {
+      background: rgba(255, 107, 107, 0.12);
+      color: var(--danger);
+      border: 1px solid rgba(255, 107, 107, 0.28);
+    }
+
+    .hint {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      color: rgba(255,255,255,0.56);
+      font-size: 14px;
+      line-height: 1.65;
+      pointer-events: none;
+      background: rgba(0,0,0,0.38);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      backdrop-filter: blur(4px);
+      z-index: 5;
+    }
+
+    #contextMenu {
+      position: absolute;
+      background: rgba(20, 25, 35, 0.98);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      z-index: 100;
+      min-width: 180px;
+    }
+
+    .menu-item {
+      padding: 12px 16px;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s;
+      touch-action: manipulation;
+    }
+
+    .menu-item:hover,
+    .menu-item:active {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .menu-item.danger {
+      color: #ff6b6b;
+    }
+
+    .menu-item.supernova {
+      color: #ffd700;
+    }
+
+    .menu-item.edit {
+      color: #7DD3FC;
+    }
+
+    @media (max-width: 768px) {
+      .topbar {
+        top: 16px;
+        right: 16px;
+        left: auto;
+        padding: 8px 10px;
+        gap: 8px;
+      }
+
+      .topbar button, #homeBtn {
+        font-size: 13px;
+        padding: 8px 12px;
+      }
+
+      #syncStatus {
+        display: none;
+      }
+
+      .capture-dock {
+        width: 100%;
+        max-width: 100%;
+        bottom: 0;
+        border-radius: 20px 20px 0 0;
+        padding: 12px 14px 24px 14px;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+        gap: 8px;
+      }
+
+      .capture-dock input {
+        flex: 1 1 100%;
+        min-width: 0;
+      }
+
+      .dock-btn {
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      .hint {
+        top: 16px;
+        left: 16px;
+        right: 110px;
+        font-size: 12px;
+        padding: 12px;
+      }
+
+      .menu-item {
+        padding: 16px 20px;
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hint">
+    ✨ <b>추가:</b> 아래 입력창에 쓰고 엔터<br>
+    ✏️ <b>수정:</b> 별 또는 텍스트를 한 번 클릭 후 아래 입력창에서 수정<br>
+    🌌 <b>연결:</b> 별을 끌어 다른 별 가까이에 놓기<br>
+    💾 <b>백업:</b> 우측 상단 다운로드 / 업로드
+  </div>
+
+  <div class="topbar">
+    <!-- ★ 홈 버튼 -->
+    <a id="homeBtn" href="../" class="topbar-link">🏠 홈</a>
+    <span id="syncStatus" title="Supabase 동기화 상태">☁️ 연결 중...</span>
+    <button id="downloadBtn">다운로드</button>
+    <button id="uploadBtn">업로드</button>
+    <input type="file" id="uploadInput" accept="application/json,.json" style="display:none;">
+  </div>
+
+  <svg id="starmap"></svg>
+
+  <div class="capture-dock">
+    <input type="text" id="thoughtInput" placeholder="머릿속에 떠오른 생각을 우주에 던지세요" autocomplete="off">
+    <button id="addThoughtBtn" class="dock-btn">별 띄우기</button>
+    <button id="disconnectBtn" class="dock-btn warning" style="display:none;">연결 끊기</button>
+    <button id="deleteBtn" class="dock-btn danger" style="display:none;">삭제</button>
+    <button id="cancelEditBtn" class="dock-btn secondary" style="display:none;">선택 해제</button>
+  </div>
+
+  <div id="contextMenu">
+    <div class="menu-item edit" id="btnEdit">✏️ 이름 수정</div>
+    <div class="menu-item supernova" id="btnComplete">🌟 초신성으로 만들기</div>
+    <div class="menu-item" id="btnDisconnect">✂️ 연결 끊기</div>
+    <div class="menu-item danger" id="btnDelete">🕳️ 삭제</div>
+  </div>
+
+  <script>
+    // =============================================
+    // Supabase 설정 (프로젝트에 맞게 수정하세요)
+    // =============================================
+    const SUPABASE_URL = 'https://dfeklapllluhgidcvgrj.supabase.co';         // 예: https://xxxx.supabase.co
+    const SUPABASE_ANON_KEY = 'sb_publishable_bV8gO3MBCDkIBXJdbn2hSw_jzHkBGw5';
+    const SUPABASE_USER_ID  = 'eundang';               // 고정 사용자 식별자
+
+    // =============================================
+    // Supabase REST API 헬퍼
+    // =============================================
+    const supabase = {
+      async load() {
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/starmap_data?user_id=eq.${SUPABASE_USER_ID}&select=data`,
+            { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+          );
+          if (!res.ok) throw new Error('load failed');
+          const rows = await res.json();
+          return rows.length > 0 ? rows[0].data : null;
+        } catch (e) {
+          console.warn('[Supabase] load 실패, localStorage 사용:', e);
+          return null;
+        }
+      },
+
+      async save(payload) {
+        try {
+          const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/starmap_data`,
+            {
+              method: 'POST',
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                Prefer: 'resolution=merge-duplicates'
+              },
+              body: JSON.stringify({ user_id: SUPABASE_USER_ID, data: payload, updated_at: new Date().toISOString() })
+            }
+          );
+          return res.ok;
+        } catch (e) {
+          console.warn('[Supabase] save 실패:', e);
+          return false;
+        }
+      }
+    };
+
+    // =============================================
+    // 동기화 상태 표시
+    // =============================================
+    const syncEl = document.getElementById('syncStatus');
+    function setSyncStatus(state, msg) {
+      syncEl.className = state;
+      syncEl.textContent = msg;
+    }
+
+    // =============================================
+    // 기존 로직 (localStorage 병행)
+    // =============================================
+    const STORAGE_KEY = 'starmap_data_v7';
+    const CONNECT_RADIUS = 180;
+    let frozenNodes = [];
+    let saveTimer = null;
+
+    const defaultData = {
+      nodes: [
+        { id: "root", type: "root", label: "나의 우주" },
+        { id: "g1", type: "goal", label: "유튜브 4만 구독자 달성" },
+        { id: "g2", type: "goal", label: "IT 강의 시그니처 갱신" },
+        { id: "p1", type: "task", label: "쇼츠 포맷 3종 실험" },
+        { id: "p2", type: "task", label: "최신 AI 사례 모음" },
+        { id: "u1", type: "dust", label: "가족 여행지 후보" }
+      ],
+      links: [
+        { source: "root", target: "g1", id: "l1" },
+        { source: "root", target: "g2", id: "l2" },
+        { source: "g1", target: "p1", id: "l3" },
+        { source: "g2", target: "p2", id: "l4" }
+      ]
+    };
+
+    function getNodeId(value) {
+      return typeof value === 'object' ? value.id : value;
+    }
+
+    function deepCopy(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function ensureRootExists(rawData) {
+      const hasRoot = rawData.nodes.some(n => n.id === 'root');
+      if (!hasRoot) {
+        rawData.nodes.unshift({ id: 'root', type: 'root', label: '나의 우주' });
+      }
+      rawData.nodes = rawData.nodes.map(n => {
+        if (n.id === 'root') {
+          return { ...n, type: 'root', label: n.label || '나의 우주' };
+        }
+        return n;
+      });
+      return rawData;
+    }
+
+    function sanitizeImportedData(raw) {
+      if (!raw || !Array.isArray(raw.nodes) || !Array.isArray(raw.links)) {
+        throw new Error('올바른 JSON 형식이 아닙니다.');
+      }
+      const nodes = raw.nodes
+        .filter(n => n && typeof n.id === 'string')
+        .map(n => ({
+          id: n.id,
+          type: typeof n.type === 'string' ? n.type : 'dust',
+          label: typeof n.label === 'string' ? n.label : n.id,
+          x: typeof n.x === 'number' ? n.x : undefined,
+          y: typeof n.y === 'number' ? n.y : undefined
+        }));
+      const nodeIds = new Set(nodes.map(n => n.id));
+      const links = raw.links
+        .map((l, index) => ({
+          id: typeof l.id === 'string' ? l.id : `import_link_${index}_${Date.now()}`,
+          source: getNodeId(l.source),
+          target: getNodeId(l.target)
+        }))
+        .filter(l => typeof l.source === 'string' && typeof l.target === 'string')
+        .filter(l => nodeIds.has(l.source) && nodeIds.has(l.target) && l.source !== l.target);
+      return ensureRootExists({ nodes, links });
+    }
+
+    // localStorage에서 먼저 로드 (즉시)
+    function loadLocalData() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          return ensureRootExists(JSON.parse(saved));
+        } catch (e) {
+          console.error("저장 데이터 파싱 실패:", e);
+        }
+      }
+      return deepCopy(defaultData);
+    }
+
+    function serializeData() {
+      return {
+        nodes: data.nodes.map(n => ({ id: n.id, type: n.type, label: n.label, x: n.x, y: n.y })),
+        links: data.links.map(l => ({ id: l.id, source: getNodeId(l.source), target: getNodeId(l.target) }))
+      };
+    }
+
+    // localStorage + Supabase 동시 저장 (디바운스 2초)
+    function saveData() {
+      const payload = serializeData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+      // Supabase 저장은 2초 디바운스
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+          setSyncStatus('offline', '☁️ 오프라인');
+          return;
+        }
+        setSyncStatus('saving', '⏳ 저장 중...');
+        const ok = await supabase.save(payload);
+        if (ok) {
+          setSyncStatus('saved', '✅ 저장됨');
+          setTimeout(() => setSyncStatus('', '☁️ 동기화 완료'), 2000);
+        } else {
+          setSyncStatus('error', '⚠️ 저장 실패');
+        }
+      }, 2000);
+    }
+
+    // 앱 초기화: localStorage로 즉시 시작 후 Supabase에서 최신 데이터 로드
+    let data = loadLocalData();
+
+    async function initFromSupabase() {
+      if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+        setSyncStatus('offline', '☁️ 로컬 전용');
+        return;
+      }
+      setSyncStatus('saving', '☁️ 불러오는 중...');
+      const remote = await supabase.load();
+      if (remote) {
+        try {
+          const sanitized = ensureRootExists(remote);
+          data = sanitized;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeData()));
+          updateGraph();
+          setSyncStatus('saved', '✅ 동기화 완료');
+          setTimeout(() => setSyncStatus('', '☁️ 준비됨'), 2000);
+        } catch (e) {
+          setSyncStatus('error', '⚠️ 원격 데이터 오류');
+        }
+      } else {
+        setSyncStatus('saved', '☁️ 준비됨');
+      }
+    }
+
+    // =============================================
+    // D3 그래프 로직 (원본 동일)
+    // =============================================
+    const nodeConfig = {
+      root:      { size: 40, color: "#ffffff" },
+      goal:      { size: 24, color: "#8BFFB0" },
+      task:      { size: 14, color: "#7DD3FC" },
+      dust:      { size: 8,  color: "#cbd5e1" },
+      supernova: { size: 20, color: "#FFD700" }
+    };
+
+    const svg = d3.select("#starmap");
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    svg.attr("width", width).attr("height", height);
+
+    const defs = svg.append("defs");
+
+    Object.keys(nodeConfig).forEach(type => {
+      const filter = defs.append("filter")
+        .attr("id", `glow-${type}`)
+        .attr("x", "-50%").attr("y", "-50%")
+        .attr("width", "200%").attr("height", "200%");
+      filter.append("feGaussianBlur")
+        .attr("stdDeviation", type === 'root' ? "15" : type === 'supernova' ? "12" : "6")
+        .attr("result", "coloredBlur");
+      const feMerge = filter.append("feMerge");
+      feMerge.append("feMergeNode").attr("in", "coloredBlur");
+      feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+    });
+
+    const g = svg.append("g");
+
+    const zoom = d3.zoom()
+      .scaleExtent([0.2, 4])
+      .on("zoom", (event) => { g.attr("transform", event.transform); });
+
+    svg.call(zoom);
+    svg.on("dblclick.zoom", null);
+
+    const tempLink = g.append("line")
+      .attr("class", "link")
+      .style("stroke", "var(--accent)")
+      .style("stroke-width", "3px")
+      .style("stroke-dasharray", "5 5")
+      .style("display", "none");
+
+    const simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(d => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-280))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide().radius(d => (nodeConfig[d.type]?.size || 10) + 18).iterations(2));
+
+    const linkGroup = g.append("g").attr("class", "links");
+    const nodeGroup = g.append("g").attr("class", "nodes");
+
+    let linkElements = linkGroup.selectAll(".link");
+    let nodeElements = nodeGroup.selectAll(".node");
+
+    let focusedNode = null;
+    let editingNode = null;
+    let selectedNodeForMenu = null;
+
+    const inputEl = document.getElementById("thoughtInput");
+    const addBtn = document.getElementById("addThoughtBtn");
+    const disconnectBtn = document.getElementById("disconnectBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const contextMenu = document.getElementById("contextMenu");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadInput = document.getElementById("uploadInput");
+
+    function normalizeLinks() {
+      data.links = data.links.filter(link => {
+        const sourceId = getNodeId(link.source);
+        const targetId = getNodeId(link.target);
+        const hasSource = data.nodes.some(n => n.id === sourceId);
+        const hasTarget = data.nodes.some(n => n.id === targetId);
+        return hasSource && hasTarget;
+      });
+    }
+
+    function pinRoot() {
+      const rootNode = data.nodes.find(n => n.id === "root");
+      if (rootNode) { rootNode.fx = width / 2; rootNode.fy = height / 2; }
+    }
+
+    function hasAnyLink(nodeId) {
+      return data.links.some(l => getNodeId(l.source) === nodeId || getNodeId(l.target) === nodeId);
+    }
+
+    function setDockAddMode() {
+      editingNode = null;
+      inputEl.value = "";
+      inputEl.placeholder = "머릿속에 떠오른 생각을 우주에 던지세요";
+      addBtn.textContent = "별 띄우기";
+      disconnectBtn.style.display = "none";
+      deleteBtn.style.display = "none";
+      cancelEditBtn.style.display = "none";
+    }
+
+    function setDockEditMode(node) {
+      if (!node) { setDockAddMode(); return; }
+      editingNode = node;
+      inputEl.value = node.label || "";
+      inputEl.placeholder = "선택한 별 이름을 수정하세요";
+      addBtn.textContent = "수정 저장";
+      if (node.id === 'root') {
+        disconnectBtn.style.display = "none";
+        deleteBtn.style.display = "none";
+      } else {
+        disconnectBtn.style.display = hasAnyLink(node.id) ? "inline-flex" : "none";
+        deleteBtn.style.display = "inline-flex";
+      }
+      cancelEditBtn.style.display = "inline-flex";
+      inputEl.focus();
+      inputEl.select();
+    }
+
+    function clearFocus() {
+      focusedNode = null;
+      refreshFocusUI();
+    }
+
+    function refreshFocusUI() {
+      if (!focusedNode) {
+        nodeElements.classed("dimmed", false).classed("selected", false);
+        linkElements.classed("dimmed", false).classed("highlighted", false);
+        return;
+      }
+      const connectedIds = new Set([focusedNode.id]);
+      data.links.forEach(l => {
+        const sourceId = getNodeId(l.source);
+        const targetId = getNodeId(l.target);
+        if (sourceId === focusedNode.id) connectedIds.add(targetId);
+        if (targetId === focusedNode.id) connectedIds.add(sourceId);
+      });
+      nodeElements
+        .classed("dimmed", node => !connectedIds.has(node.id))
+        .classed("selected", node => node.id === focusedNode.id);
+      linkElements
+        .classed("dimmed", l => getNodeId(l.source) !== focusedNode.id && getNodeId(l.target) !== focusedNode.id)
+        .classed("highlighted", l => getNodeId(l.source) === focusedNode.id || getNodeId(l.target) === focusedNode.id);
+    }
+
+    function updateGraph() {
+      normalizeLinks();
+      pinRoot();
+
+      linkElements = linkGroup.selectAll(".link").data(data.links, d => d.id);
+      linkElements.exit().remove();
+      const linkEnter = linkElements.enter().append("line").attr("class", "link");
+      linkElements = linkEnter.merge(linkElements);
+
+      nodeElements = nodeGroup.selectAll(".node").data(data.nodes, d => d.id);
+      nodeElements.exit().remove();
+
+      const nodeEnter = nodeElements.enter()
+        .append("g").attr("class", "node")
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+      nodeEnter.append("circle");
+      nodeEnter.append("text").attr("text-anchor", "middle");
+
+      nodeElements = nodeEnter.merge(nodeElements);
+
+      nodeElements.select("circle")
+        .attr("r", d => nodeConfig[d.type]?.size || 8)
+        .attr("fill", d => nodeConfig[d.type]?.color || "#cbd5e1")
+        .attr("filter", d => `url(#glow-${d.type in nodeConfig ? d.type : 'dust'})`);
+
+      nodeElements.select("text")
+        .attr("dy", d => (nodeConfig[d.type]?.size || 8) + 20)
+        .text(d => d.label)
+        .attr("fill", d => d.type === 'supernova' ? '#FFD700' : 'rgba(255,255,255,0.92)');
+
+      nodeElements.on("click", handleNodeClick).on("contextmenu", handleRightClick);
+
+      simulation.nodes(data.nodes);
+      simulation.force("link").links(data.links);
+      simulation.alpha(0.8).restart();
+
+      refreshFocusUI();
+
+      if (editingNode) {
+        const freshNode = data.nodes.find(n => n.id === editingNode.id);
+        if (freshNode) { editingNode = freshNode; setDockEditMode(freshNode); }
+        else { setDockAddMode(); }
+      }
+
+      saveData();
+    }
+
+    simulation.on("tick", () => {
+      linkElements.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+      nodeElements.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    function handleNodeClick(event, d) {
+      if (event.defaultPrevented) return;
+      hideContextMenu();
+      focusedNode = d;
+      refreshFocusUI();
+      setDockEditMode(d);
+    }
+
+    svg.on("click", (event) => {
+      if (event.target.tagName === 'svg') {
+        hideContextMenu(); clearFocus(); setDockAddMode();
+      }
+    });
+
+    svg.on("contextmenu", (event) => { event.preventDefault(); hideContextMenu(); });
+
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      hideContextMenu();
+      d.fx = d.x; d.fy = d.y;
+      frozenNodes = data.nodes.filter(n => n.id !== d.id);
+      frozenNodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
+    }
+
+    function dragged(event, d) {
+      d.fx = event.x; d.fy = event.y;
+      let targetNode = null, minDistance = Infinity;
+      data.nodes.forEach(n => {
+        if (n.id !== d.id) {
+          const dx = n.x - d.fx, dy = n.y - d.fy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_RADIUS && dist < minDistance) { minDistance = dist; targetNode = n; }
+        }
+      });
+      if (targetNode) {
+        tempLink.attr("x1", d.fx).attr("y1", d.fy).attr("x2", targetNode.x).attr("y2", targetNode.y).style("display", "block");
+      } else {
+        tempLink.style("display", "none");
+      }
+    }
+
+    function dragended(event, d) {
+      tempLink.style("display", "none");
+      let targetNode = null, minDistance = Infinity;
+      data.nodes.forEach(n => {
+        if (n.id !== d.id) {
+          const dx = n.x - d.fx, dy = n.y - d.fy;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < CONNECT_RADIUS && distance < minDistance) { minDistance = distance; targetNode = n; }
+        }
+      });
+
+      if (targetNode) {
+        const linkExists = data.links.some(l => {
+          const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
+          return (sourceId === d.id && targetId === targetNode.id) || (targetId === d.id && sourceId === targetNode.id);
+        });
+        if (!linkExists) {
+          data.links.push({ id: `l_${Date.now()}`, source: d.id, target: targetNode.id });
+          if (d.type === 'dust') d.type = targetNode.type === 'root' ? 'goal' : 'task';
+        }
+      }
+
+      frozenNodes.forEach(n => {
+        if (n.id === 'root') { n.fx = width / 2; n.fy = height / 2; }
+        else { n.fx = null; n.fy = null; }
+      });
+      frozenNodes = [];
+
+      if (d.id === 'root') { d.fx = width / 2; d.fy = height / 2; }
+      else { d.fx = null; d.fy = null; }
+
+      updateGraph();
+      simulation.alpha(0.35).restart();
+    }
+
+    function disconnectNodeById(nodeId) {
+      const node = data.nodes.find(n => n.id === nodeId);
+      if (!node || node.type === 'root') return;
+      data.links = data.links.filter(l => {
+        const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
+        return sourceId !== nodeId && targetId !== nodeId;
+      });
+      if (node.type !== 'supernova') node.type = 'dust';
+      focusedNode = node;
+      updateGraph();
+      setDockEditMode(node);
+    }
+
+    function deleteNodeById(nodeId) {
+      const node = data.nodes.find(n => n.id === nodeId);
+      if (!node || node.type === 'root') return;
+      data.nodes = data.nodes.filter(n => n.id !== nodeId);
+      data.links = data.links.filter(l => {
+        const sourceId = getNodeId(l.source), targetId = getNodeId(l.target);
+        return sourceId !== nodeId && targetId !== nodeId;
+      });
+      if (focusedNode && focusedNode.id === nodeId) focusedNode = null;
+      if (editingNode && editingNode.id === nodeId) editingNode = null;
+      updateGraph(); clearFocus(); setDockAddMode();
+    }
+
+    function showContextMenu(x, y, d) {
+      if (!d || d.type === 'root') return;
+      selectedNodeForMenu = d;
+      contextMenu.style.display = "flex";
+      const menuWidth = 190, menuHeight = 220;
+      let left = x, top = y;
+      if (left + menuWidth > window.innerWidth) left = window.innerWidth - menuWidth - 8;
+      if (top + menuHeight > window.innerHeight) top = window.innerHeight - menuHeight - 8;
+      contextMenu.style.left = `${Math.max(8, left)}px`;
+      contextMenu.style.top = `${Math.max(8, top)}px`;
+    }
+
+    function hideContextMenu() { contextMenu.style.display = "none"; selectedNodeForMenu = null; }
+
+    function handleRightClick(event, d) {
+      if (d.id === 'root') return;
+      event.preventDefault(); event.stopPropagation();
+      showContextMenu(event.pageX, event.pageY, d);
+    }
+
+    contextMenu.addEventListener("pointerdown", (e) => e.stopPropagation());
+
+    document.getElementById("btnEdit").addEventListener("click", () => {
+      if (!selectedNodeForMenu) return;
+      focusedNode = selectedNodeForMenu;
+      refreshFocusUI(); setDockEditMode(selectedNodeForMenu); hideContextMenu();
+    });
+
+    document.getElementById("btnComplete").addEventListener("click", () => {
+      if (!selectedNodeForMenu) return;
+      selectedNodeForMenu.type = 'supernova'; updateGraph(); hideContextMenu();
+    });
+
+    document.getElementById("btnDisconnect").addEventListener("click", () => {
+      if (!selectedNodeForMenu) return;
+      const targetId = selectedNodeForMenu.id; hideContextMenu(); disconnectNodeById(targetId);
+    });
+
+    document.getElementById("btnDelete").addEventListener("click", () => {
+      if (!selectedNodeForMenu) return;
+      const targetId = selectedNodeForMenu.id; hideContextMenu(); deleteNodeById(targetId);
+    });
+
+    function addOrSaveThought() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      if (editingNode) {
+        editingNode.label = text; updateGraph(); setDockEditMode(editingNode); return;
+      }
+      const t = d3.zoomTransform(svg.node());
+      const centerX = t.invertX(width / 2), centerY = t.invertY(height / 2);
+      const angle = Math.random() * Math.PI * 2, radius = 100 + Math.random() * 200;
+      const newNode = {
+        id: "node_" + Date.now(), type: "dust", label: text,
+        x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius
+      };
+      data.nodes.push(newNode); updateGraph(); setDockAddMode(); inputEl.focus();
+    }
+
+    function exportData() {
+      saveData();
+      const payload = serializeData();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const now = new Date(), pad = (v) => String(v).padStart(2, '0');
+      const filename = `starmap-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importDataFromFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          const sanitized = sanitizeImportedData(parsed);
+          data = sanitized; clearFocus(); setDockAddMode(); hideContextMenu(); updateGraph();
+        } catch (error) {
+          alert('업로드 실패: 올바른 별 지도 JSON 파일인지 확인해주세요.'); console.error(error);
+        } finally { uploadInput.value = ''; }
+      };
+      reader.readAsText(file);
+    }
+
+    addBtn.addEventListener("click", addOrSaveThought);
+    disconnectBtn.addEventListener("click", () => { if (!editingNode || editingNode.id === 'root') return; disconnectNodeById(editingNode.id); });
+    deleteBtn.addEventListener("click", () => { if (!editingNode || editingNode.id === 'root') return; deleteNodeById(editingNode.id); });
+    cancelEditBtn.addEventListener("click", () => { clearFocus(); setDockAddMode(); });
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addOrSaveThought(); }
+      if (e.key === "Escape") { e.preventDefault(); clearFocus(); setDockAddMode(); }
+    });
+    downloadBtn.addEventListener("click", exportData);
+    uploadBtn.addEventListener("click", () => uploadInput.click());
+    uploadInput.addEventListener("change", (e) => { const file = e.target.files?.[0]; importDataFromFile(file); });
+    window.addEventListener("resize", () => {
+      width = window.innerWidth; height = window.innerHeight;
+      svg.attr("width", width).attr("height", height);
+      simulation.force("center", d3.forceCenter(width / 2, height / 2));
+      pinRoot(); simulation.alpha(0.3).restart(); saveData();
+    });
+
+    // 초기 실행
+    setDockAddMode();
+    updateGraph();
+    initFromSupabase(); // Supabase에서 최신 데이터 로드
+  </script>
+</body>
+</html>
