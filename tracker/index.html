@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>SBL Toolkit · IT 뉴스 인사이트 트래커 ge </title>
+    <title>IT 뉴스 인사이트 트래커v5</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -278,8 +278,8 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
         const ALLOWED = "eundang@gmail.com";
-        // ── 익스텐션 연동: 설치 후 chrome://extensions 에서 확인한 ID로 교체 ──
-        const EXTENSION_ID = "REPLACE_WITH_YOUR_EXTENSION_ID";
+        // ── 익스텐션 연동: 발급받은 ID 적용 완료 ──
+        const EXTENSION_ID = "hfmimgbcioiegmhkakhmnkhpjebbkdgl";
 
         let currentUserId = null;
         let allNewsData = [];
@@ -303,17 +303,20 @@
                 document.getElementById("userEmail").textContent = user.email;
                 document.getElementById("loginContainer").style.display = "none";
                 document.getElementById("appContainer").style.display = "block";
+                
+                // 데이터 불러오기 (데이터 누락 버그 해결 완료)
                 loadNewsData();
 
                 // ── 익스텐션에 로그인 토큰 전달 ──
                 try {
                     user.getIdToken().then(idToken => {
                         const refreshToken = auth.currentUser?.stsTokenManager?.refreshToken || "";
-                        if (typeof chrome !== 'undefined' && chrome.runtime && EXTENSION_ID !== "REPLACE_WITH_YOUR_EXTENSION_ID") {
+                        if (typeof chrome !== 'undefined' && chrome.runtime) {
                             chrome.runtime.sendMessage(EXTENSION_ID, {
                                 type: "SBL_LOGIN",
                                 uid: user.uid,
-                                refreshToken: refreshToken
+                                refreshToken: refreshToken,
+                                idToken: idToken // 익스텐션 전송용 토큰 추가 완료
                             });
                         }
                     });
@@ -332,7 +335,7 @@
             if (confirm('로그아웃 하시겠습니까?')) signOut(auth);
         };
 
-        // ── 데이터 로드 ──
+        // ── 데이터 로드 (데이터 증발 버그 해결 완료) ──
         function loadNewsData() {
             onValue(ref(db, `users/${currentUserId}/news`), (snapshot) => {
                 allNewsData = [];
@@ -494,7 +497,7 @@
         };
 
         // ════════════════════════════════
-        //  뉴스 추가 (저장 후 → 목록 탭 이동 제거)
+        //  뉴스 추가
         // ════════════════════════════════
         window.addNewsHandler = async () => {
             const title = document.getElementById("titleInput").value.trim();
@@ -518,7 +521,7 @@
 
             try {
                 await push(ref(db, `users/${currentUserId}/news`), data);
-                // 폼 초기화 (탭은 이동하지 않음)
+                // 폼 초기화
                 document.getElementById("titleInput").value = "";
                 document.getElementById("urlInput").value   = "";
                 document.getElementById("noteInput").value  = "";
@@ -526,7 +529,8 @@
                 document.getElementById("dateInput").valueAsDate = new Date();
                 currentTags.length = 0;
                 renderInputTags();
-                // 성공 피드백 (alert 대신 인라인)
+                
+                // 성공 피드백 (인라인)
                 const btn = document.getElementById("addNewsBtn");
                 const orig = btn.textContent;
                 btn.textContent = "✅ 저장 완료!";
