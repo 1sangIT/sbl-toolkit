@@ -1,135 +1,3 @@
-<!doctype html> <html lang="ko"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <title>Second Brain Lab · SBL Toolkit</title> <style> :root { --bg: #0b1020; --bg2: #0f1730; --card: #0f1a33; --text: #e9eefc; --muted: #b9c
-
-pasted
-
-지난번 만든 툴킷 오른쪽 밑 빈 공간에 '별의 지도' 라는 이름을 넣고 새로 만든 코드를 연동시키려고 하는데. 
-
-일단 자료를 줄께. 새로 만든 코드는 starmap2026으로 첨부했고, 깃허브로 로직도 첨부했어. 
-
-인덱스는 툴킷 인덱스 전체. 
-
-1.인덱스에 '별의 지도' 추가 
-2.별의 지도 html 에 홈버튼 추가해서 인덱스로 돌아갈 수 있도록
-3.별의 지도 역시 슈퍼베이스에 자동저장되고 불러올 수 있어야 함. 
-4.깃허브에 별의지도 html 어떻게 올리면 되는지 
-
-부탁
-
-오후 3:15
-업로드된 파일들을 먼저 살펴볼게요.
-
-
-2개의 파일 조회함
-2개의 파일 조회함
-파일을 다 파악했습니다. 현재 starmap은 localStorage만 사용 중이네요. 이제 세 가지 작업을 모두 처리해드릴게요.
-
-작업 계획:
-
-index.html — 6번째 카드 별의 지도 추가 (현재 빈 공간에)
-starmap2026.html — 홈 버튼 추가 + Supabase 자동저장 연동
-GitHub 업로드 가이드
-
-Starmap 나머지 부분
-Starmap 나머지 부분
-이제 두 파일을 모두 만들겠습니다.
-
-
-SBL Toolkit index.html - 별의 지도 카드 추가 (6번째 카드)
-SBL Toolkit index.html - 별의 지도 카드 추가 (6번째 카드)
-이제 starmap에 홈 버튼 + Supabase 자동저장을 추가합니다.
-
-
-파일 생성됨, 명령 실행함, 파일 읽음
-파일 생성됨, 명령 실행함, 파일 읽음
-두 파일 준비됐습니다. 각 작업 내용 정리해드릴게요.
-
-변경 내용 요약
-1. index.html — 별의 지도 카드 추가
-6번째 카드 🌌 별의 지도 추가, 빈 공간 채움
-초록색 테두리(
-#7CFF6B)로 다른 카드와 구분
-./starmap/ 경로로 연결
-인증 로직에 c6, a6 추가 완료
-2. starmap/index.html — 홈 버튼 + Supabase
-🏠 홈 버튼 — topbar 맨 왼쪽에 파란색으로 추가, ../ 링크
-☁️ 동기화 상태 표시 — 저장 중 / 완료 / 실패 실시간 표시
-Supabase 자동저장 — 변경 2초 후 자동 저장 (디바운스)
-초기 로드 전략 — localStorage로 즉시 표시 → Supabase에서 최신 데이터 덮어쓰기
-3. Supabase 설정 (별의 지도 html 상단 수정 필요)
-파일 상단에 이 3줄을 실제 값으로 교체하세요:
-
-js
-const SUPABASE_URL = 'https://xxxx.supabase.co';       // Supabase 프로젝트 URL
-const SUPABASE_ANON_KEY = 'eyJhbGci...';               // Settings > API > anon/public key
-const SUPABASE_USER_ID  = 'eundang';                   // 그대로 두면 됨
-그리고 Supabase 대시보드에서 테이블 1개 생성:
-
-sql
-create table starmap_data (
-  user_id text primary key,
-  data    jsonb,
-  updated_at timestamptz default now()
-);
--- 인증 없이 읽기/쓰기 허용 (비공개 개인 툴이므로)
-alter table starmap_data enable row level security;
-create policy "allow all" on starmap_data for all using (true) with check (true);
-4. GitHub 업로드 방법
-현재 레포 구조에 맞게 이렇게 하면 됩니다:
-
-sbl-toolkit/
-├── index.html          ← 수정된 파일로 교체
-├── starmap/
-│   └── index.html      ← 새 폴더 만들고 업로드
-├── bitstone/
-├── bookmark/
-...
-GitHub 웹에서 직접 올리는 법:
-
-sbl-toolkit 레포 접속
-Add file → Upload files
-루트의 index.html 드래그 & 드롭 → Commit
-Create new file 클릭 → 파일명에 starmap/index.html 입력 → 내용 붙여넣기 → Commit
-GitHub Desktop이나 터미널이 편하다면:
-
-bash
-git add index.html starmap/index.html
-git commit -m "Add 별의 지도 card and starmap tool"
-git push
-
-Index
-코드 · HTML 
-
-Index
-코드 · HTML 
-하나씩 하자. 일단 업무용 툴킷 인덱스를 교체하고
-
-오후 3:21
-바로 index.html 파일만 드릴게요.
-
-
-Presented file
-Presented file
-이 파일을 GitHub에 올리면 됩니다.
-
-GitHub 웹에서 교체하는 법:
-
-sbl-toolkit 레포 접속
-index.html 파일 클릭
-우측 상단 연필(✏️) 아이콘 클릭
-전체 선택 후 삭제 → 다운받은 파일 내용 붙여넣기
-하단 Commit changes 클릭
-확인하고 다음
-
-
-Index
-코드 · HTML 
-
-
-
-Claude는 AI이며 실수할 수 있습니다. 응답을 다시 한번 확인해 주세요.
-Index · HTML
-복사
-
 <!doctype html>
 <html lang="ko">
 <head>
@@ -235,6 +103,11 @@ Index · HTML
         <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">연간 목표 & 만다라트</p>
         <a class="action" id="a4" href="./bitstone/">실행하기</a>
       </div>
+      <div class="card" id="c7">
+        <h2>✍️ 책쓰기</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">책 목차 설계 보드</p>
+        <a class="action" id="a7" href="./book.html">실행하기</a>
+      </div>
       <div class="card" id="c5">
         <h2>🧠 마인드맵</h2>
         <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">아이디어 시각화 도구</p>
@@ -274,8 +147,8 @@ Index · HTML
  
     onAuthStateChanged(auth, (user) => {
       const isAllowed = user && user.email.toLowerCase() === ALLOWED;
-      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6"];
-      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6"];
+      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
+      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6", "a7"];
  
       if (isAllowed) {
         document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
@@ -304,6 +177,4 @@ Index · HTML
 </body>
 </html>
  
-
-
 
