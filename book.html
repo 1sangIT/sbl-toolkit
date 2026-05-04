@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Outline Board</title>
+  <style>
+    :root {
+      --bg: #f6f3ec;
+      --paper: #fffaf0;
+      --card: #ffffff;
+      --ink: #222;
+      --muted: #777;
+      --line: #e2d8c7;
+      --accent: #222;
+      --soft: #f0eadf;
+      --done: #0f8a45;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    header {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+      margin-bottom: 18px;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr 130px 130px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 11px;
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #333;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 42px;
+      line-height: 1.5;
+    }
+
+    .book-title {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    .progress {
+      height: 12px;
+      background: #e8dfd1;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+
+    .percent {
+      font-weight: 800;
+      min-width: 70px;
+      text-align: right;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+      align-items: center;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+    }
+
+    button.danger {
+      background: #9d2929;
+      color: #fff;
+    }
+
+    button.small {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    button.icon {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      color: var(--ink);
+      font-size: 14px;
+      flex: 0 0 auto;
+    }
+
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .chapter {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.035);
+    }
+
+    .chapter-head {
+      display: grid;
+      grid-template-columns: 34px 34px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .handle {
+      cursor: grab;
+      user-select: none;
+      color: var(--muted);
+      font-size: 20px;
+      text-align: center;
+    }
+
+    .chapter-number {
+      font-weight: 900;
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 6px 10px;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .chapter-progress {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 8px 0 14px 78px;
+    }
+
+    .chapter-body.collapsed,
+    .topic-body.collapsed,
+    .subtopic-body.collapsed {
+      display: none;
+    }
+
+    .topic {
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      border-radius: 18px;
+      padding: 12px;
+      margin: 10px 0 10px 44px;
+    }
+
+    .topic-head {
+      display: grid;
+      grid-template-columns: 34px 34px minmax(180px, 1fr) minmax(180px, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .topic-title-badge {
+      font-size: 12px;
+      font-weight: 900;
+      color: #444;
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 6px 9px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .subtopic-row {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .subtopic-head {
+      display: grid;
+      grid-template-columns: 34px 34px minmax(150px, 1fr) 76px 76px auto;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .subtopic-body {
+      display: grid;
+      grid-template-columns: 68px minmax(260px, 1fr) 190px;
+      gap: 8px;
+      align-items: start;
+      margin-top: 8px;
+    }
+
+    .subtopic-body .ideas-wrap {
+      grid-column: 2;
+    }
+
+    .dragging {
+      opacity: 0.45;
+    }
+
+    .checklist {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 12px;
+      color: #333;
+      margin: 3px 0;
+      white-space: nowrap;
+    }
+
+    .check-item input {
+      width: auto;
+      margin: 0;
+    }
+
+    .complete-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--done);
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      background: #fffdf8;
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .file-input { display: none; }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      .top-row {
+        grid-template-columns: 1fr;
+      }
+
+      .chapter-head {
+        grid-template-columns: 34px 34px 1fr;
+      }
+
+      .chapter-head > button:not(.icon) {
+        grid-column: 3;
+      }
+
+      .topic {
+        margin-left: 0;
+      }
+
+      .topic-head {
+        grid-template-columns: 34px 34px 1fr;
+      }
+
+      .topic-head > *:nth-child(n+4) {
+        grid-column: 3;
+      }
+
+      .subtopic-head {
+        grid-template-columns: 34px 34px 1fr;
+      }
+
+      .subtopic-head > *:nth-child(n+4) {
+        grid-column: 3;
+      }
+
+      .subtopic-body {
+        grid-template-columns: 68px 1fr;
+      }
+
+      .subtopic-body .ideas-wrap,
+      .subtopic-body .checklist-wrap {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="top-row">
+        <div>
+          <label>책 제목</label>
+          <input id="bookTitle" class="book-title" placeholder="예: 2030 휴머노이드가 온다" />
+        </div>
+        <div>
+          <label>전체 목표 쪽수</label>
+          <input id="totalTarget" type="number" min="0" placeholder="250" />
+        </div>
+        <div>
+          <label>현재 작성 쪽수</label>
+          <input id="totalCurrent" type="number" min="0" placeholder="자동 계산" readonly />
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="progress"><div id="totalBar" class="bar"></div></div>
+        <div id="totalPercent" class="percent">0%</div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <a class="home-link" href="./">홈</a>
+      <button onclick="addChapter()">+ 장 추가</button>
+      <button class="secondary" onclick="expandAll()">전체 펼치기</button>
+      <button class="secondary" onclick="collapseAll()">전체 접기</button>
+      <button class="secondary" onclick="exportData()">JSON 내보내기</button>
+      <button class="secondary" onclick="exportTxt()">TXT 목차 내보내기</button>
+      <button class="secondary" onclick="document.getElementById('importFile').click()">불러오기</button>
+      <button class="danger" onclick="resetData()">초기화</button>
+      <span id="saveStatus" class="status">자동 저장됨</span>
+      <input id="importFile" class="file-input" type="file" accept="application/json" />
+    </div>
+
+    <main id="chapters"></main>
+
+    <div class="footer-note">
+      구조: <b>장 → 대주제 → 소주제</b>.  
+      접기/펼치기는 ▼ 버튼으로 조절합니다.  
+      TXT 목차 내보내기는 메모, 쪽수, 체크리스트를 제외하고 순수 목차만 저장합니다.
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+      authDomain: "itnews-82b60.firebaseapp.com",
+      databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+      projectId: "itnews-82b60",
+      storageBucket: "itnews-82b60.firebasestorage.app",
+      messagingSenderId: "719267588761",
+      appId: "1:719267588761:web:3c4607cb799620f9446608"
+    };
+
+    const ALLOWED = "eundang@gmail.com";
+    const CLOUD_SAVE_DEBOUNCE = 1500;
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    let currentUserId = null;
+    let saveTimer = null;
+    let unsubscribe = null;
+
+    function setStatus(message) {
+      const el = document.getElementById("saveStatus");
+      if (el) el.textContent = message;
+    }
+
+    window.bookCloud = {
+      save(payload) {
+        if (!currentUserId || window.suppressBookCloudSave) return;
+        if (saveTimer) clearTimeout(saveTimer);
+        setStatus("클라우드 저장 대기 중...");
+        saveTimer = setTimeout(() => {
+          setStatus("클라우드 저장 중...");
+          set(ref(db, `users/${currentUserId}/bookOutline`), payload)
+            .then(() => setStatus("Firebase 자동 저장됨"))
+            .catch((err) => {
+              console.error(err);
+              setStatus("Firebase 저장 실패 - 로컬 저장됨");
+            });
+        }, CLOUD_SAVE_DEBOUNCE);
+      }
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+
+      if (!user || !user.email || user.email.toLowerCase() !== ALLOWED) {
+        currentUserId = null;
+        setStatus("로컬 자동 저장됨");
+        return;
+      }
+
+      currentUserId = user.uid;
+      setStatus("Firebase 연결됨");
+
+      unsubscribe = onValue(ref(db, `users/${currentUserId}/bookOutline`), (snapshot) => {
+        const val = snapshot.val();
+        if (!val) {
+          if (window.getBookOutlineData) window.bookCloud.save(window.getBookOutlineData());
+          return;
+        }
+
+        if (window.applyBookCloudData) {
+          window.applyBookCloudData(val);
+        } else {
+          window.pendingBookCloudData = val;
+        }
+      });
+    });
+  </script>
+
+  <script>
+    const STORAGE_KEY = "book-outline-board-v3";
+
+    let data = {
+      bookTitle: "",
+      totalTarget: 0,
+      chapters: [
+        {
+          title: "기본기",
+          collapsed: false,
+          topics: [
+            {
+              title: "Top 5",
+              memo: "이 대주제에서 말하고 싶은 핵심",
+              collapsed: false,
+              subtopics: [
+                {
+                  subtitle: "프롬프트란?",
+                  collapsed: false,
+                  ideas: "여기에 들어갈 내용 아이디어를 적으세요.",
+                  targetPages: 5,
+                  currentPages: 0,
+                  checks: {
+                    message: false,
+                    material: false,
+                    draft: false,
+                    polish: false,
+                    done: false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    const checkLabels = {
+      message: "핵심 정리",
+      material: "자료 확보",
+      draft: "초고 작성",
+      polish: "문장 보강",
+      done: "완료"
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function normalizeData() {
+      data.chapters = data.chapters || [];
+      data.chapters.forEach(chapter => {
+        if (chapter.collapsed === undefined) chapter.collapsed = false;
+        chapter.topics = chapter.topics || [];
+        chapter.topics.forEach(topic => {
+          if (topic.collapsed === undefined) topic.collapsed = false;
+          topic.subtopics = topic.subtopics || [];
+          topic.subtopics.forEach(sub => {
+            if (sub.collapsed === undefined) sub.collapsed = false;
+            sub.checks = sub.checks || {
+              message: false,
+              material: false,
+              draft: false,
+              polish: false,
+              done: false
+            };
+          });
+        });
+      });
+    }
+
+    function save() {
+      normalizeData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      $("saveStatus").textContent = "자동 저장됨";
+      if (window.bookCloud) window.bookCloud.save(data);
+    }
+
+    function load() {
+      const savedV3 = localStorage.getItem(STORAGE_KEY);
+      const savedV2 = localStorage.getItem("book-outline-board-v2");
+      const saved = savedV3 || savedV2;
+
+      if (saved) {
+        try { data = JSON.parse(saved); } 
+        catch (e) { console.warn("저장 데이터를 불러오지 못했습니다.", e); }
+      }
+
+      normalizeData();
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function escapeAttr(str) {
+      return escapeHtml(str).replaceAll('"', "&quot;");
+    }
+
+    function percent(current, target) {
+      if (!target) return 0;
+      return Math.min(100, Math.round((current / target) * 100));
+    }
+
+    function getChapterPages(chapter) {
+      let current = 0;
+      let target = 0;
+      chapter.topics.forEach(topic => {
+        topic.subtopics.forEach(sub => {
+          current += Number(sub.currentPages || 0);
+          target += Number(sub.targetPages || 0);
+        });
+      });
+      return { current, target };
+    }
+
+    function getCurrentTotal() {
+      return data.chapters.reduce((sum, ch) => sum + getChapterPages(ch).current, 0);
+    }
+
+    function render() {
+      normalizeData();
+
+      $("bookTitle").value = data.bookTitle || "";
+      $("totalTarget").value = data.totalTarget || "";
+
+      const totalCurrent = getCurrentTotal();
+      $("totalCurrent").value = totalCurrent;
+
+      const totalPct = percent(totalCurrent, Number(data.totalTarget || 0));
+      $("totalBar").style.width = totalPct + "%";
+      $("totalPercent").textContent = totalPct + "%";
+
+      const root = $("chapters");
+      root.innerHTML = "";
+
+      if (!data.chapters.length) {
+        root.innerHTML = `<div class="empty">아직 장이 없습니다. '+ 장 추가'를 눌러 시작하세요.</div>`;
+        return;
+      }
+
+      data.chapters.forEach((chapter, chapterIndex) => {
+        const pages = getChapterPages(chapter);
+        const chPct = percent(pages.current, pages.target);
+
+        const chapterEl = document.createElement("section");
+        chapterEl.className = "chapter";
+        chapterEl.draggable = true;
+        chapterEl.dataset.chapterIndex = chapterIndex;
+
+        chapterEl.innerHTML = `
+          <div class="chapter-head">
+            <div class="handle" title="장 이동">☰</div>
+            <button class="icon" onclick="toggleChapter(${chapterIndex})" title="장 접기/펼치기">${chapter.collapsed ? "▶" : "▼"}</button>
+            <div>
+              <label><span class="chapter-number">${chapterIndex + 1}장</span> 장 제목</label>
+              <input value="${escapeAttr(chapter.title)}" oninput="editChapter(${chapterIndex}, this.value)" />
+            </div>
+            <button class="small secondary" onclick="deleteChapter(${chapterIndex})">장 삭제</button>
+          </div>
+          <div class="chapter-progress">
+            이 장: 현재 ${pages.current}쪽 / 목표 ${pages.target}쪽 · ${chPct}%
+          </div>
+          <div class="chapter-body ${chapter.collapsed ? "collapsed" : ""}">
+            <div class="topics" data-chapter-index="${chapterIndex}"></div>
+            <div class="toolbar" style="margin: 12px 0 0 78px;">
+              <button class="small secondary" onclick="addTopic(${chapterIndex})">+ 대주제 추가</button>
+            </div>
+          </div>
+        `;
+
+        root.appendChild(chapterEl);
+        const topicsEl = chapterEl.querySelector(".topics");
+
+        chapter.topics.forEach((topic, topicIndex) => {
+          const topicEl = document.createElement("div");
+          topicEl.className = "topic";
+          topicEl.draggable = true;
+          topicEl.dataset.chapterIndex = chapterIndex;
+          topicEl.dataset.topicIndex = topicIndex;
+
+          topicEl.innerHTML = `
+            <div class="topic-head">
+              <div class="handle" title="대주제 이동">☰</div>
+              <button class="icon" onclick="toggleTopic(${chapterIndex}, ${topicIndex})" title="대주제 접기/펼치기">${topic.collapsed ? "▶" : "▼"}</button>
+              <div>
+                <span class="topic-title-badge">대주제 ${topicIndex + 1}</span>
+                <input value="${escapeAttr(topic.title)}" oninput="editTopic(${chapterIndex}, ${topicIndex}, 'title', this.value)" placeholder="대주제 제목" />
+              </div>
+              <div>
+                <label>대주제 메모</label>
+                <input value="${escapeAttr(topic.memo)}" oninput="editTopic(${chapterIndex}, ${topicIndex}, 'memo', this.value)" placeholder="이 대주제의 핵심" />
+              </div>
+              <button class="small secondary" onclick="deleteTopic(${chapterIndex}, ${topicIndex})">대주제 삭제</button>
+            </div>
+            <div class="topic-body ${topic.collapsed ? "collapsed" : ""}">
+              <div class="subtopics"></div>
+              <div class="toolbar" style="margin: 10px 0 0 76px;">
+                <button class="small secondary" onclick="addSubtopic(${chapterIndex}, ${topicIndex})">+ 소주제 추가</button>
+              </div>
+            </div>
+          `;
+
+          topicsEl.appendChild(topicEl);
+          const subtopicsEl = topicEl.querySelector(".subtopics");
+
+          topic.subtopics.forEach((sub, subIndex) => {
+            const allDone = Object.values(sub.checks || {}).every(Boolean);
+
+            const row = document.createElement("div");
+            row.className = "subtopic-row";
+            row.draggable = true;
+            row.dataset.chapterIndex = chapterIndex;
+            row.dataset.topicIndex = topicIndex;
+            row.dataset.subIndex = subIndex;
+
+            row.innerHTML = `
+              <div class="subtopic-head">
+                <div class="handle" title="소주제 이동">☰</div>
+                <button class="icon" onclick="toggleSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex})" title="소주제 접기/펼치기">${sub.collapsed ? "▶" : "▼"}</button>
+                <div>
+                  <label>소주제</label>
+                  <input value="${escapeAttr(sub.subtitle)}" oninput="editSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex}, 'subtitle', this.value)" />
+                </div>
+                <div>
+                  <label>목표 쪽수</label>
+                  <input type="number" min="0" value="${Number(sub.targetPages || 0)}" oninput="editSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex}, 'targetPages', this.value)" />
+                </div>
+                <div>
+                  <label>현재 쪽수</label>
+                  <input type="number" min="0" value="${Number(sub.currentPages || 0)}" oninput="editSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex}, 'currentPages', this.value)" />
+                </div>
+                <button class="small secondary" onclick="deleteSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex})">삭제</button>
+              </div>
+
+              <div class="subtopic-body ${sub.collapsed ? "collapsed" : ""}">
+                <div class="ideas-wrap">
+                  <label>들어갈 내용 아이디어</label>
+                  <textarea oninput="editSubtopic(${chapterIndex}, ${topicIndex}, ${subIndex}, 'ideas', this.value)">${escapeHtml(sub.ideas)}</textarea>
+                </div>
+                <div class="checklist-wrap">
+                  <label>체크리스트</label>
+                  <div class="checklist">
+                    ${Object.keys(checkLabels).map(key => `
+                      <label class="check-item">
+                        <input type="checkbox" ${sub.checks && sub.checks[key] ? "checked" : ""} onchange="editCheck(${chapterIndex}, ${topicIndex}, ${subIndex}, '${key}', this.checked)" />
+                        ${checkLabels[key]}
+                      </label>
+                    `).join("")}
+                    ${allDone ? `<span class="complete-badge">작성 완료</span>` : ""}
+                  </div>
+                </div>
+              </div>
+            `;
+
+            subtopicsEl.appendChild(row);
+          });
+        });
+      });
+
+      bindDragEvents();
+    }
+
+    function updateHeader() {
+      data.bookTitle = $("bookTitle").value;
+      data.totalTarget = Number($("totalTarget").value || 0);
+      save();
+      render();
+    }
+
+    function toggleChapter(chapterIndex) {
+      data.chapters[chapterIndex].collapsed = !data.chapters[chapterIndex].collapsed;
+      save();
+      render();
+    }
+
+    function toggleTopic(chapterIndex, topicIndex) {
+      data.chapters[chapterIndex].topics[topicIndex].collapsed = !data.chapters[chapterIndex].topics[topicIndex].collapsed;
+      save();
+      render();
+    }
+
+    function toggleSubtopic(chapterIndex, topicIndex, subIndex) {
+      data.chapters[chapterIndex].topics[topicIndex].subtopics[subIndex].collapsed =
+        !data.chapters[chapterIndex].topics[topicIndex].subtopics[subIndex].collapsed;
+      save();
+      render();
+    }
+
+    function expandAll() {
+      data.chapters.forEach(ch => {
+        ch.collapsed = false;
+        ch.topics.forEach(t => {
+          t.collapsed = false;
+          t.subtopics.forEach(s => s.collapsed = false);
+        });
+      });
+      save();
+      render();
+    }
+
+    function collapseAll() {
+      data.chapters.forEach(ch => {
+        ch.collapsed = true;
+        ch.topics.forEach(t => {
+          t.collapsed = true;
+          t.subtopics.forEach(s => s.collapsed = true);
+        });
+      });
+      save();
+      render();
+    }
+
+    function editChapter(chapterIndex, value) {
+      data.chapters[chapterIndex].title = value;
+      save();
+    }
+
+    function editTopic(chapterIndex, topicIndex, key, value) {
+      data.chapters[chapterIndex].topics[topicIndex][key] = value;
+      save();
+    }
+
+    function editSubtopic(chapterIndex, topicIndex, subIndex, key, value) {
+      if (key === "targetPages" || key === "currentPages") value = Number(value || 0);
+      data.chapters[chapterIndex].topics[topicIndex].subtopics[subIndex][key] = value;
+      save();
+      if (key === "targetPages" || key === "currentPages") render();
+    }
+
+    function editCheck(chapterIndex, topicIndex, subIndex, key, checked) {
+      const sub = data.chapters[chapterIndex].topics[topicIndex].subtopics[subIndex];
+      if (!sub.checks) sub.checks = {};
+      sub.checks[key] = checked;
+      save();
+      render();
+    }
+
+    function addChapter() {
+      data.chapters.push({ title: `${data.chapters.length + 1}장 제목`, collapsed: false, topics: [] });
+      save();
+      render();
+    }
+
+    function deleteChapter(chapterIndex) {
+      if (!confirm("이 장을 삭제할까요?")) return;
+      data.chapters.splice(chapterIndex, 1);
+      save();
+      render();
+    }
+
+    function addTopic(chapterIndex) {
+      data.chapters[chapterIndex].topics.push({
+        title: "새 대주제",
+        memo: "",
+        collapsed: false,
+        subtopics: []
+      });
+      save();
+      render();
+    }
+
+    function deleteTopic(chapterIndex, topicIndex) {
+      if (!confirm("이 대주제를 삭제할까요?")) return;
+      data.chapters[chapterIndex].topics.splice(topicIndex, 1);
+      save();
+      render();
+    }
+
+    function addSubtopic(chapterIndex, topicIndex) {
+      data.chapters[chapterIndex].topics[topicIndex].subtopics.push({
+        subtitle: "새 소주제",
+        collapsed: false,
+        ideas: "",
+        targetPages: 0,
+        currentPages: 0,
+        checks: {
+          message: false,
+          material: false,
+          draft: false,
+          polish: false,
+          done: false
+        }
+      });
+      save();
+      render();
+    }
+
+    function deleteSubtopic(chapterIndex, topicIndex, subIndex) {
+      if (!confirm("이 소주제를 삭제할까요?")) return;
+      data.chapters[chapterIndex].topics[topicIndex].subtopics.splice(subIndex, 1);
+      save();
+      render();
+    }
+
+    function bindDragEvents() {
+      let draggedChapter = null;
+      let draggedTopic = null;
+      let draggedSubtopic = null;
+
+      document.querySelectorAll(".chapter").forEach(el => {
+        el.addEventListener("dragstart", e => {
+          if (!e.target.classList.contains("chapter")) return;
+          draggedChapter = Number(el.dataset.chapterIndex);
+          el.classList.add("dragging");
+        });
+
+        el.addEventListener("dragend", () => {
+          draggedChapter = null;
+          el.classList.remove("dragging");
+        });
+
+        el.addEventListener("dragover", e => {
+          if (draggedChapter === null) return;
+          e.preventDefault();
+        });
+
+        el.addEventListener("drop", e => {
+          if (draggedChapter === null) return;
+          e.preventDefault();
+          const targetIndex = Number(el.dataset.chapterIndex);
+          if (draggedChapter === targetIndex) return;
+          const moved = data.chapters.splice(draggedChapter, 1)[0];
+          data.chapters.splice(targetIndex, 0, moved);
+          save();
+          render();
+        });
+      });
+
+      document.querySelectorAll(".topic").forEach(el => {
+        el.addEventListener("dragstart", e => {
+          draggedTopic = {
+            chapterIndex: Number(el.dataset.chapterIndex),
+            topicIndex: Number(el.dataset.topicIndex)
+          };
+          el.classList.add("dragging");
+          e.stopPropagation();
+        });
+
+        el.addEventListener("dragend", e => {
+          draggedTopic = null;
+          el.classList.remove("dragging");
+          e.stopPropagation();
+        });
+
+        el.addEventListener("dragover", e => {
+          if (!draggedTopic) return;
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        el.addEventListener("drop", e => {
+          if (!draggedTopic) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          const targetChapterIndex = Number(el.dataset.chapterIndex);
+          const targetTopicIndex = Number(el.dataset.topicIndex);
+
+          const sourceTopics = data.chapters[draggedTopic.chapterIndex].topics;
+          const moved = sourceTopics.splice(draggedTopic.topicIndex, 1)[0];
+
+          data.chapters[targetChapterIndex].topics.splice(targetTopicIndex, 0, moved);
+          save();
+          render();
+        });
+      });
+
+      document.querySelectorAll(".subtopic-row").forEach(el => {
+        el.addEventListener("dragstart", e => {
+          draggedSubtopic = {
+            chapterIndex: Number(el.dataset.chapterIndex),
+            topicIndex: Number(el.dataset.topicIndex),
+            subIndex: Number(el.dataset.subIndex)
+          };
+          el.classList.add("dragging");
+          e.stopPropagation();
+        });
+
+        el.addEventListener("dragend", e => {
+          draggedSubtopic = null;
+          el.classList.remove("dragging");
+          e.stopPropagation();
+        });
+
+        el.addEventListener("dragover", e => {
+          if (!draggedSubtopic) return;
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        el.addEventListener("drop", e => {
+          if (!draggedSubtopic) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          const targetChapterIndex = Number(el.dataset.chapterIndex);
+          const targetTopicIndex = Number(el.dataset.topicIndex);
+          const targetSubIndex = Number(el.dataset.subIndex);
+
+          const sourceSubtopics = data.chapters[draggedSubtopic.chapterIndex].topics[draggedSubtopic.topicIndex].subtopics;
+          const moved = sourceSubtopics.splice(draggedSubtopic.subIndex, 1)[0];
+
+          data.chapters[targetChapterIndex].topics[targetTopicIndex].subtopics.splice(targetSubIndex, 0, moved);
+          save();
+          render();
+        });
+      });
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      downloadBlob(blob, "book-outline-board.json");
+    }
+
+    function exportTxt() {
+      const lines = [];
+
+      data.chapters.forEach((chapter, chapterIndex) => {
+        const chapterTitle = String(chapter.title || "").trim() || "제목 없음";
+        lines.push(`${chapterIndex + 1}장 ${chapterTitle}`);
+
+        chapter.topics.forEach((topic, topicIndex) => {
+          const topicTitle = String(topic.title || "").trim() || "제목 없음";
+          lines.push(`   ${topicIndex + 1}. ${topicTitle}`);
+
+          topic.subtopics.forEach(sub => {
+            const subTitle = String(sub.subtitle || "").trim() || "제목 없음";
+            lines.push(`      ${subTitle}`);
+          });
+
+          lines.push("");
+        });
+
+        lines.push("----");
+        lines.push("");
+      });
+
+      const content = lines.join("\n").trim() + "\n";
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      downloadBlob(blob, "book-outline.txt");
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    $("importFile").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          data = JSON.parse(reader.result);
+          normalizeData();
+          save();
+          render();
+        } catch (err) {
+          alert("JSON 파일을 불러오지 못했습니다.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function resetData() {
+      if (!confirm("모든 내용을 초기화할까요?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      data = { bookTitle: "", totalTarget: 0, chapters: [] };
+      render();
+    }
+
+    $("bookTitle").addEventListener("input", updateHeader);
+    $("totalTarget").addEventListener("input", updateHeader);
+
+    window.getBookOutlineData = () => data;
+    window.applyBookCloudData = (incomingData) => {
+      if (!incomingData || typeof incomingData !== "object") return;
+      if (JSON.stringify(incomingData) === JSON.stringify(data)) {
+        $("saveStatus").textContent = "Firebase 동기화됨";
+        return;
+      }
+      window.suppressBookCloudSave = true;
+      data = incomingData;
+      normalizeData();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      render();
+      $("saveStatus").textContent = "Firebase에서 불러옴";
+      window.suppressBookCloudSave = false;
+    };
+
+    load();
+    render();
+    if (window.pendingBookCloudData) window.applyBookCloudData(window.pendingBookCloudData);
+  </script>
+</body>
+</html>
