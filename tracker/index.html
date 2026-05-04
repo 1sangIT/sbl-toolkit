@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>SBL Toolkit · IT 뉴스 인사이트 트래커</title>
+    <title>SBL Toolkit · IT 뉴스 인사이트 트래커V3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -13,34 +13,24 @@
             --text: #1f2937; --text-light: #6b7280;
         }
         body { font-family: -apple-system, system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; background: var(--light-bg); color: var(--text); }
-        
-        /* [상단 프로필 및 공통 UI] */
         .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
         .user-profile { display: flex; align-items: center; gap: 1rem; background: white; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); }
         .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
         .user-info { display: flex; flex-direction: column; }
         .user-name { font-weight: 700; font-size: 0.95rem; }
         .user-email { font-size: 0.75rem; color: var(--text-light); }
-        
-        /* [탭 디자인] */
         .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
         .tab { padding: 0.75rem 1.25rem; cursor: pointer; border: none; background: transparent; font-weight: 800; color: var(--text-light); white-space: nowrap; border-bottom: 2px solid transparent; transition: all 0.2s; }
         .tab:hover { color: var(--primary); }
         .tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
-
-        /* [입력 폼] */
         input, textarea, select { width: 100%; padding: 0.75rem; margin: 0.5rem 0 1rem 0; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
         textarea { min-height: 100px; resize: vertical; }
         label { font-weight: 700; font-size: 0.9rem; color: var(--text); display: block; margin-top: 0.5rem; }
-
-        /* [분석 대시보드 스탯 카드] */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .stat-card { background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); }
         .stat-label { font-size: 0.9rem; color: var(--text-light); font-weight: 700; margin-top: 5px; }
         .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-
-        /* [타임라인 디자인 - 좌우 교차형] */
         .timeline { position: relative; padding: 2rem 0; margin-top: 1rem; }
         .timeline::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--primary); transform: translateX(-50%); }
         .timeline-item { position: relative; width: 45%; margin-bottom: 2rem; }
@@ -48,8 +38,6 @@
         .timeline-item.right { margin-left: 55%; text-align: left; }
         .timeline-dot { position: absolute; left: 50%; top: 20px; width: 14px; height: 14px; background: var(--primary); border-radius: 50%; transform: translateX(-50%); z-index: 2; border: 3px solid white; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         .timeline-content { background: white; padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-
-        /* [공통 카드 및 리스트] */
         .news-item { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; transition: box-shadow 0.2s; }
         .news-item:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .news-tag { background: #eef2ff; color: #4f46e5; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 900; margin-right: 5px; display: inline-block; margin-top: 5px; }
@@ -57,10 +45,41 @@
         .tag-cloud-item:hover { background: var(--primary); color: white; transform: translateY(-2px); }
         .cluster-card { background: white; padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 1.5rem; }
         .cluster-title { font-size: 1.2rem; font-weight: 900; color: var(--primary); margin-bottom: 1rem; }
-        
         .view-container { display: none; }
         .view-container.active { display: block; }
-        
+
+        /* 태그 자동완성 드롭다운 */
+        .tag-autocomplete {
+            position: absolute; background: white; border: 1px solid var(--border);
+            border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 100; max-height: 160px; overflow-y: auto; min-width: 200px;
+        }
+        .tag-autocomplete-item {
+            padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+            transition: background 0.15s;
+        }
+        .tag-autocomplete-item:hover, .tag-autocomplete-item.selected {
+            background: #eef2ff; color: var(--primary);
+        }
+        .tag-input-wrap { position: relative; }
+
+        /* 수정 모달 */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 200;
+            justify-content: center; align-items: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white; border-radius: 12px; padding: 1.75rem;
+            width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal h3 { margin-top: 0; font-weight: 900; margin-bottom: 1rem; }
+        .modal-btn-row { display: flex; gap: 8px; margin-top: 1rem; }
+        .btn-primary { flex: 1; padding: 0.75rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.95rem; }
+        .btn-cancel  { flex: 1; padding: 0.75rem; background: white; color: var(--text-light); border: 1px solid var(--border); border-radius: 8px; font-weight: 800; cursor: pointer; }
+
         @media (max-width: 768px) {
             .top-nav { flex-direction: column; align-items: stretch; }
             .timeline::before { left: 20px; }
@@ -76,7 +95,7 @@
     <div class="top-nav">
         <h1 style="margin:0; font-size:1.5rem; font-weight:900;">📊 IT 뉴스 인사이트 트래커</h1>
         <div style="display:flex; gap:8px; flex-wrap: wrap;">
-            <button class="btn-home" style="background:#fff; border:1px solid #ddd; border-radius:6px; padding:0.5rem 1rem; cursor:pointer; font-weight:800;" onclick="location.href='https://1sangit.github.io/sbl-toolkit/index.html'">🏠 홈으로</button>
+            <button style="background:#fff; border:1px solid #ddd; border-radius:6px; padding:0.5rem 1rem; cursor:pointer; font-weight:800;" onclick="location.href='https://1sangit.github.io/sbl-toolkit/index.html'">🏠 홈으로</button>
             <button class="tab" style="background:var(--primary); color:white; border-radius:6px;" onclick="exportData()">💾 내보내기</button>
             <button class="tab" style="background:var(--primary); color:white; border-radius:6px;" onclick="triggerImport()">📥 가져오기</button>
         </div>
@@ -112,12 +131,12 @@
             <div style="background:white; padding:1.5rem; border-radius:10px; border:1px solid var(--border);">
                 <h3 style="margin-top:0; font-weight:900;">새로운 뉴스 등록</h3>
                 <label>뉴스 제목 *</label>
-                <input type="text" id="titleInput" placeholder="예: AI 기술 동향 분석" onkeydown="if(event.key==='Enter') addNewsHandler()">
+                <input type="text" id="titleInput" placeholder="예: AI 기술 동향 분석">
                 
                 <div style="display:flex; gap:10px; flex-wrap: wrap;">
                     <div style="flex:2; min-width: 200px;">
                         <label>URL *</label>
-                        <input type="url" id="urlInput" placeholder="https://..." onkeydown="if(event.key==='Enter') addNewsHandler()">
+                        <input type="url" id="urlInput" placeholder="https://...">
                     </div>
                     <div style="flex:1; min-width: 150px;">
                         <label>날짜 *</label>
@@ -126,10 +145,14 @@
                 </div>
                 
                 <label>태그 (Enter로 추가)</label>
-                <div style="display:flex; gap:5px; flex-wrap:wrap; border:1px solid var(--border); padding:8px; border-radius:6px; margin-bottom:1rem; min-height: 45px;">
+                <div style="display:flex; gap:5px; flex-wrap:wrap; border:1px solid var(--border); padding:8px; border-radius:6px; margin-bottom:0.25rem; min-height: 45px; position:relative;">
                     <div id="tagsContainer" style="display:flex; gap:5px; flex-wrap:wrap;"></div>
-                    <input type="text" id="tagInput" placeholder="태그 입력 후 Enter" style="border:none; outline:none; flex:1; margin:0; padding:5px;">
+                    <div class="tag-input-wrap" style="flex:1; min-width:120px; position:relative;">
+                        <input type="text" id="tagInput" placeholder="태그 입력 후 Enter" style="border:none; outline:none; flex:1; margin:0; padding:5px; width:100%;">
+                        <div id="tagDropdown" class="tag-autocomplete" style="display:none; top:100%; left:0; position:absolute;"></div>
+                    </div>
                 </div>
+                <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:1rem;">기존 태그에서 자동 제안됩니다</div>
                 
                 <label>메모 (선택)</label>
                 <textarea id="noteInput" placeholder="이 뉴스에 대한 간단한 메모를 남겨보세요..."></textarea>
@@ -141,22 +164,10 @@
         <!-- 분석 탭 -->
         <div id="analysisView" class="view-container">
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-total">0</div>
-                    <div class="stat-label">총 뉴스</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-tags">0</div>
-                    <div class="stat-label">태그 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-recent">0</div>
-                    <div class="stat-label">최근 7일</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="stat-avg">0</div>
-                    <div class="stat-label">월평균</div>
-                </div>
+                <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">총 뉴스</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-tags">0</div><div class="stat-label">태그 수</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-recent">0</div><div class="stat-label">최근 7일</div></div>
+                <div class="stat-card"><div class="stat-value" id="stat-avg">0</div><div class="stat-label">월평균</div></div>
             </div>
             <div class="chart-row">
                 <div class="stat-card">
@@ -173,11 +184,9 @@
         <!-- 목록 보기 탭 -->
         <div id="listView" class="view-container">
             <div style="display:flex; gap:10px; margin-bottom:1rem; flex-wrap:wrap;">
-                <select id="tagFilter" style="flex:1; min-width:120px; margin: 0;">
-                    <option value="">태그: 전체</option>
-                </select>
+                <select id="tagFilter" style="flex:1; min-width:120px; margin: 0;"><option value="">태그: 전체</option></select>
                 <input type="text" id="searchInput" placeholder="🔍 제목으로 검색..." style="flex:2; min-width:200px; margin:0;">
-                <button id="downloadCsvBtn" style="background:var(--success); color:white; border:none; padding:0.6rem 1rem; border-radius:6px; font-weight:800; cursor: pointer;">📥 CSV 다운로드</button>
+                <button id="downloadCsvBtn" style="background:var(--success); color:white; border:none; padding:0.6rem 1rem; border-radius:6px; font-weight:800; cursor: pointer;">📥 CSV</button>
             </div>
             <div id="newsList"></div>
         </div>
@@ -186,33 +195,25 @@
         <div id="timelineView" class="view-container">
             <div style="text-align: center; margin-bottom: 1.5rem;">
                 <h3 style="font-weight:900;">⏱️ 시간순 뉴스 타임라인</h3>
-                <p style="color: var(--text-light);">등록된 뉴스를 시간 흐름에 따라 시각화했습니다</p>
             </div>
-            
-            <!-- 타임라인 필터 -->
             <div style="background:white; padding:1rem; border-radius:10px; border:1px solid var(--border); margin-bottom:1.5rem;">
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
                     <div style="flex:1; min-width:150px;">
-                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">태그 필터</label>
-                        <select id="timelineTagFilter" style="margin:0;">
-                            <option value="">전체 태그</option>
-                        </select>
+                        <label style="font-size:0.85rem;">태그 필터</label>
+                        <select id="timelineTagFilter" style="margin:0;"><option value="">전체 태그</option></select>
                     </div>
                     <div style="flex:1; min-width:150px;">
-                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">시작일</label>
+                        <label style="font-size:0.85rem;">시작일</label>
                         <input type="date" id="timelineStartDate" style="margin:0;">
                     </div>
                     <div style="flex:1; min-width:150px;">
-                        <label style="font-size:0.85rem; margin-bottom:0.3rem;">종료일</label>
+                        <label style="font-size:0.85rem;">종료일</label>
                         <input type="date" id="timelineEndDate" style="margin:0;">
                     </div>
-                    <button onclick="resetTimelineFilter()" style="background:var(--text-light); color:white; border:none; padding:0.75rem 1.5rem; border-radius:6px; font-weight:800; cursor:pointer; white-space:nowrap;">🔄 초기화</button>
+                    <button onclick="resetTimelineFilter()" style="background:var(--text-light); color:white; border:none; padding:0.75rem 1.5rem; border-radius:6px; font-weight:800; cursor:pointer;">🔄 초기화</button>
                 </div>
-                <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-light);">
-                    총 <span id="timelineCount" style="font-weight:800; color:var(--primary);">0</span>개의 뉴스
-                </div>
+                <div style="margin-top:0.5rem; font-size:0.85rem; color:var(--text-light);">총 <span id="timelineCount" style="font-weight:800; color:var(--primary);">0</span>개</div>
             </div>
-            
             <div class="timeline" id="newsTimeline"></div>
         </div>
 
@@ -234,11 +235,40 @@
         </div>
     </div>
 
+    <!-- ✏️ 수정 모달 -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h3>✏️ 뉴스 수정</h3>
+            <input type="hidden" id="editId">
+            <label>뉴스 제목 *</label>
+            <input type="text" id="editTitle" placeholder="뉴스 제목">
+            <label>URL *</label>
+            <input type="url" id="editUrl" placeholder="https://...">
+            <label>날짜 *</label>
+            <input type="date" id="editDate">
+            <label>태그</label>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; border:1px solid var(--border); padding:8px; border-radius:6px; margin-bottom:0.25rem; min-height:45px; position:relative;">
+                <div id="editTagsContainer" style="display:flex; gap:5px; flex-wrap:wrap;"></div>
+                <div class="tag-input-wrap" style="flex:1; min-width:120px; position:relative;">
+                    <input type="text" id="editTagInput" placeholder="태그 입력 후 Enter" style="border:none; outline:none; margin:0; padding:5px; width:100%;">
+                    <div id="editTagDropdown" class="tag-autocomplete" style="display:none; top:100%; left:0; position:absolute;"></div>
+                </div>
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:0.5rem;">기존 태그에서 자동 제안됩니다</div>
+            <label>메모</label>
+            <textarea id="editNote" placeholder="메모..."></textarea>
+            <div class="modal-btn-row">
+                <button class="btn-cancel" onclick="closeEditModal()">취소</button>
+                <button class="btn-primary" onclick="saveEdit()">💾 수정 저장</button>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, set } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -255,287 +285,310 @@
         const db = getDatabase(app);
         const auth = getAuth(app);
         const ALLOWED = "eundang@gmail.com";
+        // ── 익스텐션 연동: 설치 후 chrome://extensions 에서 확인한 ID로 교체 ──
+        const EXTENSION_ID = "REPLACE_WITH_YOUR_EXTENSION_ID";
 
         let currentUserId = null;
         let allNewsData = [];
         const currentTags = [];
+        let editTags = [];
         let tagChart, trendChart;
 
-        // 인증 상태 감시
+        // ── 전체 태그 목록 (자동완성용) ──
+        function getAllTags() {
+            const set = new Set();
+            allNewsData.forEach(n => (n.tags || []).forEach(t => set.add(t)));
+            return Array.from(set).sort();
+        }
+
+        // ── 인증 ──
         onAuthStateChanged(auth, (user) => {
             if (user && user.email.toLowerCase() === ALLOWED) {
                 currentUserId = user.uid;
-                document.getElementById("userAvatar").src = user.photoURL || 'https://via.placeholder.com/36';
+                document.getElementById("userAvatar").src = user.photoURL || '';
                 document.getElementById("userName").textContent = user.displayName || '사용자';
                 document.getElementById("userEmail").textContent = user.email;
                 document.getElementById("loginContainer").style.display = "none";
                 document.getElementById("appContainer").style.display = "block";
                 loadNewsData();
+
+                // ── 익스텐션에 로그인 토큰 전달 ──
+                try {
+                    user.getIdToken().then(idToken => {
+                        const refreshToken = auth.currentUser?.stsTokenManager?.refreshToken || "";
+                        if (typeof chrome !== 'undefined' && chrome.runtime && EXTENSION_ID !== "REPLACE_WITH_YOUR_EXTENSION_ID") {
+                            chrome.runtime.sendMessage(EXTENSION_ID, {
+                                type: "SBL_LOGIN",
+                                uid: user.uid,
+                                refreshToken: refreshToken
+                            });
+                        }
+                    });
+                } catch(_) {}
+
             } else {
-                if(user) { 
-                    alert("⚠️ 권한이 없습니다. 승인된 계정으로 로그인해주세요."); 
-                    signOut(auth); 
-                }
+                if (user) { alert("⚠️ 권한이 없습니다."); signOut(auth); }
                 document.getElementById("loginContainer").style.display = "block";
                 document.getElementById("appContainer").style.display = "none";
             }
         });
 
-        document.getElementById("googleLoginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch(err => alert('로그인 실패: ' + err.message));
+        document.getElementById("googleLoginBtn").onclick = () =>
+            signInWithPopup(auth, new GoogleAuthProvider()).catch(err => alert('로그인 실패: ' + err.message));
         document.getElementById("logoutBtn").onclick = () => {
-            if(confirm('로그아웃 하시겠습니까?')) {
-                signOut(auth);
-            }
+            if (confirm('로그아웃 하시겠습니까?')) signOut(auth);
         };
 
-        // 데이터 로드
+        // ── 데이터 로드 ──
         function loadNewsData() {
             onValue(ref(db, `users/${currentUserId}/news`), (snapshot) => {
                 allNewsData = [];
-                snapshot.forEach(child => { 
-                    allNewsData.push({ id: child.key, ...child.val() }); 
-                });
+                snapshot.forEach(child => allNewsData.push({ id: child.key, ...child.val() }));
                 allNewsData.sort((a, b) => new Date(b.date) - new Date(a.date));
                 updateViews();
                 updateTimelineTagFilter();
             });
         }
 
-        // --- 분석 탭 렌더링 ---
+        // ════════════════════════════════
+        //  태그 자동완성 공통 헬퍼
+        // ════════════════════════════════
+        function setupTagAutocomplete(inputEl, dropdownEl, tagsArr, renderFn) {
+            let acIdx = -1;
+
+            inputEl.addEventListener("input", () => {
+                const val = inputEl.value.trim().toLowerCase();
+                if (!val) { dropdownEl.style.display = "none"; return; }
+                const matches = getAllTags().filter(t => t.includes(val) && !tagsArr.includes(t));
+                if (matches.length === 0) { dropdownEl.style.display = "none"; return; }
+                acIdx = -1;
+                dropdownEl.innerHTML = matches.slice(0, 8).map((t, i) =>
+                    `<div class="tag-autocomplete-item" data-tag="${t}">${t}</div>`
+                ).join('');
+                dropdownEl.style.display = "block";
+                dropdownEl.querySelectorAll('.tag-autocomplete-item').forEach(item => {
+                    item.addEventListener("mousedown", (e) => {
+                        e.preventDefault();
+                        addTagTo(item.dataset.tag, tagsArr, renderFn);
+                        inputEl.value = "";
+                        dropdownEl.style.display = "none";
+                    });
+                });
+            });
+
+            inputEl.addEventListener("keydown", (e) => {
+                const items = dropdownEl.querySelectorAll('.tag-autocomplete-item');
+                if (e.key === "ArrowDown") { acIdx = Math.min(acIdx + 1, items.length - 1); highlightAC(items, acIdx); e.preventDefault(); return; }
+                if (e.key === "ArrowUp")   { acIdx = Math.max(acIdx - 1, -1); highlightAC(items, acIdx); e.preventDefault(); return; }
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (acIdx >= 0 && items[acIdx]) {
+                        addTagTo(items[acIdx].dataset.tag, tagsArr, renderFn);
+                        inputEl.value = ""; dropdownEl.style.display = "none"; acIdx = -1; return;
+                    }
+                    const val = inputEl.value.trim().toLowerCase();
+                    if (val) { addTagTo(val, tagsArr, renderFn); inputEl.value = ""; dropdownEl.style.display = "none"; }
+                }
+                if (e.key === "Backspace" && inputEl.value === "" && tagsArr.length > 0) {
+                    tagsArr.pop(); renderFn();
+                }
+                if (e.key === "Escape") { dropdownEl.style.display = "none"; acIdx = -1; }
+            });
+
+            inputEl.addEventListener("blur", () => setTimeout(() => { dropdownEl.style.display = "none"; }, 150));
+        }
+
+        function highlightAC(items, idx) {
+            items.forEach((el, i) => el.classList.toggle('selected', i === idx));
+        }
+
+        function addTagTo(tag, tagsArr, renderFn) {
+            if (tag && !tagsArr.includes(tag)) { tagsArr.push(tag); renderFn(); }
+        }
+
+        // ── 입력 폼 태그 UI ──
+        function renderInputTags() {
+            const container = document.getElementById("tagsContainer");
+            if (!container) return;
+            container.innerHTML = "";
+            currentTags.forEach((tag, i) => {
+                const span = document.createElement("span");
+                span.className = "news-tag";
+                span.innerHTML = `${tag} <span onclick="removeTag(${i})" style="cursor:pointer;">×</span>`;
+                container.appendChild(span);
+            });
+        }
+        window.removeTag = (i) => { currentTags.splice(i, 1); renderInputTags(); };
+
+        // 자동완성 세팅 (새 뉴스 추가)
+        setupTagAutocomplete(
+            document.getElementById("tagInput"),
+            document.getElementById("tagDropdown"),
+            currentTags,
+            renderInputTags
+        );
+
+        // ════════════════════════════════
+        //  수정 모달
+        // ════════════════════════════════
+        window.openEditModal = (id) => {
+            const n = allNewsData.find(x => x.id === id);
+            if (!n) return;
+            document.getElementById("editId").value    = id;
+            document.getElementById("editTitle").value = n.title;
+            document.getElementById("editUrl").value   = n.url;
+            document.getElementById("editDate").value  = n.date;
+            document.getElementById("editNote").value  = n.note || "";
+            editTags.length = 0;
+            (n.tags || []).forEach(t => editTags.push(t));
+            renderEditTags();
+            document.getElementById("editModal").classList.add("open");
+        };
+
+        window.closeEditModal = () => {
+            document.getElementById("editModal").classList.remove("open");
+        };
+
+        // 모달 외부 클릭 시 닫기
+        document.getElementById("editModal").addEventListener("click", (e) => {
+            if (e.target === document.getElementById("editModal")) closeEditModal();
+        });
+
+        function renderEditTags() {
+            const container = document.getElementById("editTagsContainer");
+            container.innerHTML = "";
+            editTags.forEach((tag, i) => {
+                const span = document.createElement("span");
+                span.className = "news-tag";
+                span.innerHTML = `${tag} <span onclick="removeEditTag(${i})" style="cursor:pointer;">×</span>`;
+                container.appendChild(span);
+            });
+        }
+        window.removeEditTag = (i) => { editTags.splice(i, 1); renderEditTags(); };
+
+        // 자동완성 세팅 (수정 모달)
+        setupTagAutocomplete(
+            document.getElementById("editTagInput"),
+            document.getElementById("editTagDropdown"),
+            editTags,
+            renderEditTags
+        );
+
+        window.saveEdit = async () => {
+            const id    = document.getElementById("editId").value;
+            const title = document.getElementById("editTitle").value.trim();
+            const url   = document.getElementById("editUrl").value.trim();
+            const date  = document.getElementById("editDate").value;
+            if (!title || !url || !date) { alert("⚠️ 필수 항목을 입력해주세요."); return; }
+
+            // editTagInput에 남은 값 처리
+            const leftover = document.getElementById("editTagInput").value.trim().toLowerCase();
+            if (leftover && !editTags.includes(leftover)) editTags.push(leftover);
+
+            try {
+                await update(ref(db, `users/${currentUserId}/news/${id}`), {
+                    title, url, date,
+                    tags: [...editTags],
+                    note: document.getElementById("editNote").value.trim()
+                });
+                closeEditModal();
+                alert("✅ 수정되었습니다!");
+            } catch (err) {
+                alert("❌ 수정 실패: " + err.message);
+            }
+        };
+
+        // ════════════════════════════════
+        //  뉴스 추가 (저장 후 → 목록 탭 이동 제거)
+        // ════════════════════════════════
+        window.addNewsHandler = async () => {
+            const title = document.getElementById("titleInput").value.trim();
+            const url   = document.getElementById("urlInput").value.trim();
+            const date  = document.getElementById("dateInput").value;
+
+            if (!title) { alert("⚠️ 제목을 입력해주세요."); document.getElementById("titleInput").focus(); return; }
+            if (!url)   { alert("⚠️ URL을 입력해주세요."); document.getElementById("urlInput").focus(); return; }
+            if (!date)  { alert("⚠️ 날짜를 선택해주세요."); return; }
+
+            // tagInput에 남은 값 처리
+            const leftover = document.getElementById("tagInput").value.trim().toLowerCase();
+            if (leftover && !currentTags.includes(leftover)) currentTags.push(leftover);
+
+            const data = {
+                title, url, date,
+                tags: [...currentTags],
+                note: document.getElementById("noteInput").value.trim(),
+                timestamp: Date.now()
+            };
+
+            try {
+                await push(ref(db, `users/${currentUserId}/news`), data);
+                // 폼 초기화 (탭은 이동하지 않음)
+                document.getElementById("titleInput").value = "";
+                document.getElementById("urlInput").value   = "";
+                document.getElementById("noteInput").value  = "";
+                document.getElementById("tagInput").value   = "";
+                document.getElementById("dateInput").valueAsDate = new Date();
+                currentTags.length = 0;
+                renderInputTags();
+                // 성공 피드백 (alert 대신 인라인)
+                const btn = document.getElementById("addNewsBtn");
+                const orig = btn.textContent;
+                btn.textContent = "✅ 저장 완료!";
+                btn.style.background = "var(--success)";
+                setTimeout(() => { btn.textContent = orig; btn.style.background = ""; }, 2000);
+            } catch (err) {
+                alert("❌ 저장 실패: " + err.message);
+            }
+        };
+
+        // ── 삭제 ──
+        window.deleteNews = (id) => {
+            if (confirm("정말 삭제하시겠습니까?")) {
+                remove(ref(db, `users/${currentUserId}/news/${id}`))
+                    .catch(err => alert('❌ 삭제 실패: ' + err.message));
+            }
+        };
+
+        // ── 분석 ──
         function renderAnalysis() {
             if (allNewsData.length === 0) {
-                document.getElementById('stat-total').textContent = '0';
-                document.getElementById('stat-tags').textContent = '0';
-                document.getElementById('stat-recent').textContent = '0';
-                document.getElementById('stat-avg').textContent = '0';
+                ['stat-total','stat-tags','stat-recent','stat-avg'].forEach(id => document.getElementById(id).textContent = '0');
                 return;
             }
-            
             document.getElementById('stat-total').textContent = allNewsData.length;
-            
             const tagsSet = new Set();
             allNewsData.forEach(n => (n.tags || []).forEach(t => tagsSet.add(t)));
             document.getElementById('stat-tags').textContent = tagsSet.size;
-
-            const sevenDaysAgo = new Date(); 
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             document.getElementById('stat-recent').textContent = allNewsData.filter(n => new Date(n.date) >= sevenDaysAgo).length;
-            
-            // 월평균 계산
-            const oldestDate = new Date(allNewsData[allNewsData.length - 1]?.date || new Date());
-            const monthsDiff = Math.max(1, (new Date() - oldestDate) / (1000 * 60 * 60 * 24 * 30));
-            document.getElementById('stat-avg').textContent = (allNewsData.length / monthsDiff).toFixed(1);
+            const oldest = new Date(allNewsData[allNewsData.length - 1]?.date || new Date());
+            const months = Math.max(1, (new Date() - oldest) / (1000*60*60*24*30));
+            document.getElementById('stat-avg').textContent = (allNewsData.length / months).toFixed(1);
 
-            // 차트 1: 태그 분포
             const tagCounts = {};
-            allNewsData.forEach(n => (n.tags || []).forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1));
-            const sortedTags = Object.entries(tagCounts).sort((a,b) => b[1]-a[1]).slice(0, 10);
-            
-            if(tagChart) tagChart.destroy();
-            const tagCtx = document.getElementById('tagPieChart');
-            if(tagCtx) {
-                tagChart = new Chart(tagCtx, {
-                    type: 'doughnut',
-                    data: { 
-                        labels: sortedTags.map(t=>t[0]), 
-                        datasets: [{ 
-                            data: sortedTags.map(t=>t[1]), 
-                            backgroundColor: ['#3b82f6','#ef4444','#10b981','#f59e0b','#6366f1','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4']
-                        }] 
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
-
-            // 차트 2: 등록 추이
+            allNewsData.forEach(n => (n.tags || []).forEach(t => tagCounts[t] = (tagCounts[t]||0)+1));
+            const sortedTags = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+            if (tagChart) tagChart.destroy();
+            tagChart = new Chart(document.getElementById('tagPieChart'), {
+                type: 'doughnut',
+                data: { labels: sortedTags.map(t=>t[0]), datasets: [{ data: sortedTags.map(t=>t[1]), backgroundColor: ['#3b82f6','#ef4444','#10b981','#f59e0b','#6366f1','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4'] }] },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
             const monthCounts = {};
-            allNewsData.forEach(n => { 
-                const m = n.date.substring(0, 7); 
-                monthCounts[m] = (monthCounts[m] || 0) + 1; 
-            });
+            allNewsData.forEach(n => { const m = n.date.substring(0,7); monthCounts[m] = (monthCounts[m]||0)+1; });
             const sortedMonths = Object.keys(monthCounts).sort();
-            
-            if(trendChart) trendChart.destroy();
-            const trendCtx = document.getElementById('trendLineChart');
-            if(trendCtx) {
-                trendChart = new Chart(trendCtx, {
-                    type: 'line',
-                    data: { 
-                        labels: sortedMonths, 
-                        datasets: [{ 
-                            label: '뉴스 수', 
-                            data: sortedMonths.map(m=>monthCounts[m]), 
-                            borderColor: '#3b82f6', 
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true, 
-                            tension: 0.4 
-                        }] 
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
-        }
-
-        // --- 타임라인 태그 필터 업데이트 ---
-        function updateTimelineTagFilter() {
-            const tags = new Set();
-            allNewsData.forEach(n => (n.tags || []).forEach(t => tags.add(t)));
-            const select = document.getElementById("timelineTagFilter");
-            if(select) {
-                const current = select.value;
-                select.innerHTML = '<option value="">전체 태그</option>' + 
-                    Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
-            }
-        }
-
-        // --- 타임라인 카운트 업데이트 ---
-        function updateTimelineCount(count) {
-            const countEl = document.getElementById('timelineCount');
-            if(countEl) countEl.textContent = count;
-        }
-
-        // --- 타임라인 필터 초기화 ---
-        window.resetTimelineFilter = () => {
-            document.getElementById('timelineTagFilter').value = '';
-            document.getElementById('timelineStartDate').value = '';
-            document.getElementById('timelineEndDate').value = '';
-            renderTimeline();
-        };
-
-        // --- 타임라인 렌더링 (필터 적용) ---
-        function renderTimeline() {
-            const container = document.getElementById('newsTimeline');
-            if(!container) return;
-            
-            if(allNewsData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">등록된 뉴스가 없습니다</div>';
-                updateTimelineCount(0);
-                return;
-            }
-            
-            // 필터 적용
-            const tagFilter = document.getElementById('timelineTagFilter')?.value || '';
-            const startDate = document.getElementById('timelineStartDate')?.value || '';
-            const endDate = document.getElementById('timelineEndDate')?.value || '';
-            
-            let filtered = allNewsData.filter(n => {
-                // 태그 필터
-                if(tagFilter && !(n.tags || []).includes(tagFilter)) return false;
-                
-                // 날짜 필터
-                if(startDate && n.date < startDate) return false;
-                if(endDate && n.date > endDate) return false;
-                
-                return true;
-            });
-            
-            updateTimelineCount(filtered.length);
-            
-            if(filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">필터 조건에 맞는 뉴스가 없습니다</div>';
-                return;
-            }
-            
-            container.innerHTML = '';
-            filtered.forEach((n, i) => {
-                const item = document.createElement('div');
-                item.className = `timeline-item ${i % 2 === 0 ? 'left' : 'right'}`;
-                item.innerHTML = `
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content">
-                        <div style="font-size:0.8rem; color:var(--text-light); font-weight:700;">${n.date}</div>
-                        <h4 style="margin:8px 0; font-weight:900;">${n.title}</h4>
-                        <a href="${n.url}" target="_blank" style="font-size:0.85rem; color:var(--primary); word-break: break-all;">${n.url.length > 60 ? n.url.substring(0, 60) + '...' : n.url}</a>
-                        ${n.note ? `<p style="margin-top:10px; font-size:0.9rem; color:var(--text-light); font-style:italic;">${n.note}</p>` : ''}
-                        <div style="margin-top:10px;">${(n.tags || []).map(t => `<span class="news-tag">${t}</span>`).join('')}</div>
-                    </div>`;
-                container.appendChild(item);
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(document.getElementById('trendLineChart'), {
+                type: 'line',
+                data: { labels: sortedMonths, datasets: [{ label: '뉴스 수', data: sortedMonths.map(m=>monthCounts[m]), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4 }] },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }
 
-        // --- 태그 클라우드 렌더링 ---
-        function renderTagsView() {
-            const container = document.getElementById('tagsList');
-            if(!container) return;
-            
-            const tagCounts = {};
-            allNewsData.forEach(n => (n.tags || []).forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1));
-            
-            if(Object.keys(tagCounts).length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">등록된 태그가 없습니다</div>';
-                return;
-            }
-            
-            const sortedTags = Object.entries(tagCounts).sort((a,b) => b[1] - a[1]);
-            const maxCount = sortedTags[0][1];
-            
-            container.innerHTML = sortedTags.map(([tag, count]) => {
-                const size = 0.9 + (count / maxCount) * 1.5;
-                return `<span class="tag-cloud-item" style="font-size:${size}rem;" onclick="filterByTag('${tag}')" title="${count}개의 뉴스">${tag} (${count})</span>`;
-            }).join('');
-        }
-
-        window.filterByTag = (tag) => {
-            document.getElementById('tagFilter').value = tag;
-            switchTab('list');
-        };
-
-        // --- 연관 뉴스 클러스터 렌더링 ---
-        function renderClusters() {
-            const container = document.getElementById('newsClusters');
-            if(!container) return;
-            
-            const tagGroups = {};
-            allNewsData.forEach(n => {
-                (n.tags || []).forEach(tag => {
-                    if(!tagGroups[tag]) tagGroups[tag] = [];
-                    tagGroups[tag].push(n);
-                });
-            });
-            
-            if(Object.keys(tagGroups).length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">연관 뉴스가 없습니다</div>';
-                return;
-            }
-            
-            const sortedGroups = Object.entries(tagGroups)
-                .filter(([tag, news]) => news.length >= 2)
-                .sort((a, b) => b[1].length - a[1].length)
-                .slice(0, 10);
-            
-            container.innerHTML = sortedGroups.map(([tag, news]) => `
-                <div class="cluster-card">
-                    <div class="cluster-title">🏷️ ${tag} <span style="font-size:0.9rem; color:var(--text-light);">(${news.length}개)</span></div>
-                    ${news.slice(0, 5).map(n => `
-                        <div style="padding:0.75rem; background:var(--light-bg); border-radius:6px; margin-bottom:0.5rem;">
-                            <div style="font-size:0.8rem; color:var(--text-light);">${n.date}</div>
-                            <div style="font-weight:700; margin:5px 0;">${n.title}</div>
-                            <a href="${n.url}" target="_blank" style="font-size:0.85rem; color:var(--primary);">링크 보기 →</a>
-                        </div>
-                    `).join('')}
-                    ${news.length > 5 ? `<div style="text-align:center; margin-top:1rem; color:var(--text-light); font-size:0.9rem;">외 ${news.length - 5}개 더보기</div>` : ''}
-                </div>
-            `).join('');
-        }
-
-        // --- 목록 렌더링 ---
+        // ── 목록 ──
         function renderList() {
-            const list = document.getElementById("newsList");
-            if(!list) return;
-            
+            const list = document.getElementById("newsList"); if (!list) return;
             const filter = document.getElementById("tagFilter").value;
             const search = document.getElementById("searchInput").value.toLowerCase();
             const filtered = allNewsData.filter(n => {
@@ -543,233 +596,167 @@
                 const matchSearch = !search || n.title.toLowerCase().includes(search) || (n.note||'').toLowerCase().includes(search);
                 return matchTag && matchSearch;
             });
-            
-            if(filtered.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">검색 결과가 없습니다</div>';
-                return;
-            }
-            
+            if (filtered.length === 0) { list.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-light);">검색 결과가 없습니다</div>'; return; }
             list.innerHTML = filtered.map(n => `
                 <div class="news-item">
-                    <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:0.5rem;">
                         <div style="flex:1;">
                             <div style="font-size:0.8rem; color:var(--text-light); font-weight:700;">${n.date}</div>
                             <div style="font-weight:900; font-size:1.1rem; margin:5px 0;">${n.title}</div>
-                            <a href="${n.url}" target="_blank" style="color:var(--primary); font-size:0.9rem; word-break: break-all;">${n.url}</a>
+                            <a href="${n.url}" target="_blank" style="color:var(--primary); font-size:0.9rem; word-break:break-all;">${n.url}</a>
                             ${n.note ? `<p style="margin-top:8px; font-size:0.9rem; color:var(--text); background:var(--light-bg); padding:0.5rem; border-radius:4px;">${n.note}</p>` : ''}
                         </div>
-                        <button onclick="deleteNews('${n.id}')" style="color:var(--danger); border:1px solid var(--danger); background:white; padding:0.5rem 1rem; border-radius:6px; font-weight:800; cursor:pointer; white-space: nowrap;">🗑️ 삭제</button>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button onclick="openEditModal('${n.id}')" style="color:var(--primary); border:1px solid var(--primary); background:white; padding:0.5rem 0.875rem; border-radius:6px; font-weight:800; cursor:pointer;">✏️ 수정</button>
+                            <button onclick="deleteNews('${n.id}')" style="color:var(--danger); border:1px solid var(--danger); background:white; padding:0.5rem 0.875rem; border-radius:6px; font-weight:800; cursor:pointer;">🗑️ 삭제</button>
+                        </div>
                     </div>
-                    <div style="margin-top:10px;">${(n.tags || []).map(t => `<span class="news-tag">${t}</span>`).join('')}</div>
+                    <div style="margin-top:10px;">${(n.tags||[]).map(t=>`<span class="news-tag">${t}</span>`).join('')}</div>
                 </div>
             `).join('');
-            
-            // 필터 목록 업데이트
-            const tags = new Set(); 
-            allNewsData.forEach(n => (n.tags||[]).forEach(t => tags.add(t)));
-            const select = document.getElementById("tagFilter");
+            const tags = new Set(); allNewsData.forEach(n => (n.tags||[]).forEach(t => tags.add(t)));
+            const select = document.getElementById("tagFilter"); const current = select.value;
+            select.innerHTML = '<option value="">태그: 전체</option>' + Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
+        }
+
+        // ── 타임라인 ──
+        function updateTimelineTagFilter() {
+            const tags = new Set(); allNewsData.forEach(n => (n.tags||[]).forEach(t => tags.add(t)));
+            const select = document.getElementById("timelineTagFilter"); if (!select) return;
             const current = select.value;
-            select.innerHTML = '<option value="">태그: 전체</option>' + 
-                Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
+            select.innerHTML = '<option value="">전체 태그</option>' + Array.from(tags).sort().map(t=>`<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
+        }
+        window.resetTimelineFilter = () => {
+            document.getElementById('timelineTagFilter').value = '';
+            document.getElementById('timelineStartDate').value = '';
+            document.getElementById('timelineEndDate').value = '';
+            renderTimeline();
+        };
+        function renderTimeline() {
+            const container = document.getElementById('newsTimeline'); if (!container) return;
+            if (allNewsData.length === 0) { container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-light);">등록된 뉴스가 없습니다</div>'; return; }
+            const tagFilter = document.getElementById('timelineTagFilter')?.value || '';
+            const startDate = document.getElementById('timelineStartDate')?.value || '';
+            const endDate   = document.getElementById('timelineEndDate')?.value   || '';
+            const filtered  = allNewsData.filter(n => {
+                if (tagFilter && !(n.tags||[]).includes(tagFilter)) return false;
+                if (startDate && n.date < startDate) return false;
+                if (endDate   && n.date > endDate)   return false;
+                return true;
+            });
+            document.getElementById('timelineCount').textContent = filtered.length;
+            if (filtered.length === 0) { container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-light);">필터 조건에 맞는 뉴스가 없습니다</div>'; return; }
+            container.innerHTML = '';
+            filtered.forEach((n, i) => {
+                const item = document.createElement('div');
+                item.className = `timeline-item ${i%2===0?'left':'right'}`;
+                item.innerHTML = `
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <div style="font-size:0.8rem;color:var(--text-light);font-weight:700;">${n.date}</div>
+                        <h4 style="margin:8px 0;font-weight:900;">${n.title}</h4>
+                        <a href="${n.url}" target="_blank" style="font-size:0.85rem;color:var(--primary);word-break:break-all;">${n.url.length>60?n.url.substring(0,60)+'...':n.url}</a>
+                        ${n.note?`<p style="margin-top:10px;font-size:0.9rem;color:var(--text-light);font-style:italic;">${n.note}</p>`:''}
+                        <div style="margin-top:10px;">${(n.tags||[]).map(t=>`<span class="news-tag">${t}</span>`).join('')}</div>
+                    </div>`;
+                container.appendChild(item);
+            });
         }
 
-        // --- CSV 다운로드 ---
-        function downloadCSV() {
-            if(allNewsData.length === 0) {
-                alert('다운로드할 데이터가 없습니다.');
-                return;
-            }
-            
-            const headers = ['날짜', '제목', 'URL', '태그', '메모'];
-            const rows = allNewsData.map(n => [
-                n.date,
-                `"${(n.title || '').replace(/"/g, '""')}"`,
-                n.url,
-                `"${(n.tags || []).join(', ')}"`,
-                `"${(n.note || '').replace(/"/g, '""')}"`
-            ]);
-            
-            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-            const BOM = '\uFEFF';
-            const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `IT뉴스_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
+        // ── 태그 클라우드 ──
+        function renderTagsView() {
+            const container = document.getElementById('tagsList'); if (!container) return;
+            const tagCounts = {};
+            allNewsData.forEach(n => (n.tags||[]).forEach(t => tagCounts[t] = (tagCounts[t]||0)+1));
+            if (Object.keys(tagCounts).length === 0) { container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-light);">등록된 태그가 없습니다</div>'; return; }
+            const sortedTags = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]);
+            const maxCount = sortedTags[0][1];
+            container.innerHTML = sortedTags.map(([tag, count]) => {
+                const size = 0.9 + (count/maxCount)*1.5;
+                return `<span class="tag-cloud-item" style="font-size:${size}rem;" onclick="filterByTag('${tag}')" title="${count}개">${tag} (${count})</span>`;
+            }).join('');
+        }
+        window.filterByTag = (tag) => { document.getElementById('tagFilter').value = tag; switchTab('list'); };
+
+        // ── 연관 뉴스 ──
+        function renderClusters() {
+            const container = document.getElementById('newsClusters'); if (!container) return;
+            const tagGroups = {};
+            allNewsData.forEach(n => (n.tags||[]).forEach(tag => { if(!tagGroups[tag]) tagGroups[tag]=[]; tagGroups[tag].push(n); }));
+            const sortedGroups = Object.entries(tagGroups).filter(([,news])=>news.length>=2).sort((a,b)=>b[1].length-a[1].length).slice(0,10);
+            if (sortedGroups.length === 0) { container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-light);">연관 뉴스가 없습니다</div>'; return; }
+            container.innerHTML = sortedGroups.map(([tag, news]) => `
+                <div class="cluster-card">
+                    <div class="cluster-title">🏷️ ${tag} <span style="font-size:0.9rem;color:var(--text-light);">(${news.length}개)</span></div>
+                    ${news.slice(0,5).map(n=>`
+                        <div style="padding:0.75rem;background:var(--light-bg);border-radius:6px;margin-bottom:0.5rem;">
+                            <div style="font-size:0.8rem;color:var(--text-light);">${n.date}</div>
+                            <div style="font-weight:700;margin:5px 0;">${n.title}</div>
+                            <a href="${n.url}" target="_blank" style="font-size:0.85rem;color:var(--primary);">링크 보기 →</a>
+                        </div>`).join('')}
+                    ${news.length>5?`<div style="text-align:center;margin-top:1rem;color:var(--text-light);font-size:0.9rem;">외 ${news.length-5}개</div>`:''}
+                </div>`).join('');
         }
 
-        document.getElementById('downloadCsvBtn').onclick = downloadCSV;
-
-        // --- 뉴스 추가 ---
-        window.addNewsHandler = async () => {
-            const title = document.getElementById("titleInput").value.trim();
-            const url = document.getElementById("urlInput").value.trim();
-            const date = document.getElementById("dateInput").value;
-            
-            if (!title) {
-                alert("⚠️ 제목을 입력해주세요.");
-                document.getElementById("titleInput").focus();
-                return;
-            }
-            if (!url) {
-                alert("⚠️ URL을 입력해주세요.");
-                document.getElementById("urlInput").focus();
-                return;
-            }
-            if (!date) {
-                alert("⚠️ 날짜를 선택해주세요.");
-                return;
-            }
-            
-            const data = { 
-                title, 
-                url, 
-                date, 
-                tags: [...currentTags], 
-                note: document.getElementById("noteInput").value.trim(),
-                timestamp: Date.now() 
-            };
-            
-            try {
-                await push(ref(db, `users/${currentUserId}/news`), data);
-                
-                // 입력 폼 초기화
-                document.getElementById("titleInput").value = "";
-                document.getElementById("urlInput").value = "";
-                document.getElementById("noteInput").value = "";
-                document.getElementById("dateInput").valueAsDate = new Date();
-                currentTags.length = 0;
-                renderInputTags();
-                
-                alert("✅ 저장되었습니다!");
-                switchTab("list");
-            } catch(err) {
-                alert("❌ 저장 실패: " + err.message);
-            }
+        // ── CSV ──
+        document.getElementById('downloadCsvBtn').onclick = () => {
+            if (allNewsData.length === 0) { alert('데이터가 없습니다.'); return; }
+            const rows = allNewsData.map(n => [n.date, `"${(n.title||'').replace(/"/g,'""')}"`, n.url, `"${(n.tags||[]).join(', ')}"`, `"${(n.note||'').replace(/"/g,'""')}"`]);
+            const csv = [['날짜','제목','URL','태그','메모'].join(','), ...rows.map(r=>r.join(','))].join('\n');
+            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `IT뉴스_${new Date().toISOString().split('T')[0]}.csv`; a.click();
         };
 
-        // --- 데이터 내보내기/가져오기 ---
+        // ── 내보내기/가져오기 ──
         window.exportData = () => {
-            if(allNewsData.length === 0) {
-                alert('내보낼 데이터가 없습니다.');
-                return;
-            }
-            const blob = new Blob([JSON.stringify({ news: allNewsData, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = `tracker-backup-${new Date().toISOString().split('T')[0]}.json`; 
-            a.click();
-            alert('✅ 데이터를 내보냈습니다!');
+            if (allNewsData.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+            const blob = new Blob([JSON.stringify({news:allNewsData, exportDate:new Date().toISOString()},null,2)], {type:'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `tracker-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
         };
-
         window.triggerImport = () => document.getElementById("importFileInput").click();
-        
         document.getElementById("importFileInput").onchange = (e) => {
-            const file = e.target.files[0]; 
-            if(!file) return;
-            
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = async (ev) => {
                 try {
                     const imported = JSON.parse(ev.target.result);
                     const data = imported.news || [];
-                    
-                    if(data.length === 0) {
-                        alert('가져올 데이터가 없습니다.');
-                        return;
+                    if (data.length === 0) { alert('가져올 데이터가 없습니다.'); return; }
+                    if (confirm(`${data.length}개를 가져오시겠습니까?`)) {
+                        for (const item of data) { delete item.id; await push(ref(db, `users/${currentUserId}/news`), item); }
+                        alert(`✅ ${data.length}개 가져왔습니다!`); e.target.value = '';
                     }
-                    
-                    if(confirm(`${data.length}개의 데이터를 가져오시겠습니까?\n(기존 데이터는 유지됩니다)`)) {
-                        let count = 0;
-                        for(const item of data) { 
-                            delete item.id; 
-                            await push(ref(db, `users/${currentUserId}/news`), item);
-                            count++;
-                        }
-                        alert(`✅ ${count}개의 데이터를 가져왔습니다!`);
-                        e.target.value = ''; // 파일 입력 초기화
-                    }
-                } catch(err) {
-                    alert('❌ 파일 형식이 올바르지 않습니다: ' + err.message);
-                }
+                } catch(err) { alert('❌ 파일 형식 오류: ' + err.message); }
             };
             reader.readAsText(file);
         };
 
-        // --- 뉴스 삭제 ---
-        window.deleteNews = (id) => { 
-            if(confirm("정말 삭제하시겠습니까?")) {
-                remove(ref(db, `users/${currentUserId}/news/${id}`))
-                    .then(() => alert('✅ 삭제되었습니다'))
-                    .catch(err => alert('❌ 삭제 실패: ' + err.message));
-            }
-        };
-
-        // --- 탭 전환 ---
+        // ── 탭 전환 ──
         window.switchTab = (view) => {
-            document.querySelectorAll(".tab").forEach(t => {
-                t.classList.toggle("active", t.dataset.view === view);
-            });
-            document.querySelectorAll(".view-container").forEach(c => {
-                c.classList.toggle("active", c.id === `${view}View`);
-            });
+            document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
+            document.querySelectorAll(".view-container").forEach(c => c.classList.toggle("active", c.id === `${view}View`));
             updateViews();
         };
-
         function updateViews() {
             const active = document.querySelector(".tab.active")?.dataset.view;
-            if(!active) return;
-            
-            if(active === 'list') renderList();
-            if(active === 'analysis') renderAnalysis();
-            if(active === 'timeline') renderTimeline();
-            if(active === 'tags') renderTagsView();
-            if(active === 'clusters') renderClusters();
+            if (!active) return;
+            if (active === 'list')     renderList();
+            if (active === 'analysis') renderAnalysis();
+            if (active === 'timeline') renderTimeline();
+            if (active === 'tags')     renderTagsView();
+            if (active === 'clusters') renderClusters();
         }
 
-        // --- 태그 입력 UI ---
-        function renderInputTags() {
-            const container = document.getElementById("tagsContainer"); 
-            if(!container) return;
-            container.innerHTML = "";
-            currentTags.forEach((tag, i) => {
-                const span = document.createElement("span"); 
-                span.className = "news-tag";
-                span.innerHTML = `${tag} <span onclick="removeTag(${i})" style="cursor:pointer; margin-left:3px;">×</span>`;
-                container.appendChild(span);
-            });
-        }
-
-        window.removeTag = (index) => {
-            currentTags.splice(index, 1);
-            renderInputTags();
-        };
-
-        document.getElementById("tagInput").onkeydown = (e) => { 
-            if(e.key === "Enter" && e.target.value.trim()) { 
-                e.preventDefault();
-                const newTag = e.target.value.trim().toLowerCase();
-                if(!currentTags.includes(newTag)) {
-                    currentTags.push(newTag); 
-                }
-                e.target.value = ""; 
-                renderInputTags(); 
-            } 
-        };
-
-        // --- 타임라인 필터 이벤트 리스너 ---
-        document.getElementById('timelineTagFilter')?.addEventListener('change', renderTimeline);
-        document.getElementById('timelineStartDate')?.addEventListener('change', renderTimeline);
-        document.getElementById('timelineEndDate')?.addEventListener('change', renderTimeline);
-
-        // --- 이벤트 리스너 등록 ---
+        // ── 이벤트 바인딩 ──
         document.querySelectorAll(".tab").forEach(t => t.onclick = () => switchTab(t.dataset.view));
         document.getElementById("addNewsBtn").onclick = window.addNewsHandler;
         document.getElementById("searchInput").oninput = renderList;
-        document.getElementById("tagFilter").onchange = renderList;
+        document.getElementById("tagFilter").onchange  = renderList;
+        document.getElementById('timelineTagFilter').addEventListener('change', renderTimeline);
+        document.getElementById('timelineStartDate').addEventListener('change', renderTimeline);
+        document.getElementById('timelineEndDate').addEventListener('change', renderTimeline);
         document.getElementById("dateInput").valueAsDate = new Date();
 
-        // 초기화
         renderInputTags();
     </script>
 </body>
