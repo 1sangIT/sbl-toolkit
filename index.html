@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Second Brain Lab · SBL Toolkit</title>
+  <title>Second Brain Lab · SBL Toolkit V09</title>
   <style>
     :root {
       --bg: #0b1020; --bg2: #0f1730; --card: #0f1a33;
@@ -42,13 +42,19 @@
       transition: 0.3s ease; text-align: center;
     }
     .card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--accent); }
- 
+
     /* 별의 지도 카드 특별 스타일 */
     .card.starmap-card.unlocked {
       border-color: #7CFF6B;
       background: rgba(124, 255, 107, 0.05);
     }
- 
+
+    /* Weekly Plan 카드 특별 스타일 */
+    .card.weekly-card.unlocked {
+      border-color: #6ea8ff;
+      background: rgba(110, 168, 255, 0.06);
+    }
+
     .card h2 { margin-top: 0; }
     .action {
       display: block; margin-top: 20px; padding: 12px; border-radius: 12px;
@@ -57,6 +63,7 @@
     }
     .action.active { background: var(--accent); color: #fff; pointer-events: auto; }
     .action.active.starmap-action { background: #3a8f2f; color: #fff; }
+    .action.active.weekly-action { background: #3b82f6; color: #fff; }
     footer { margin-top: 60px; text-align: center; font-size: 12px; opacity: 0.4; }
     @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
@@ -71,17 +78,17 @@
         <button class="btn" id="logoutBtn" style="display:none;">로그아웃</button>
       </div>
     </header>
- 
+
     <section class="hero">
       <h1 id="hTitle">업무용 툴킷</h1>
       <p id="hMsg">지정된 관리자 계정으로 로그인해 주세요.</p>
     </section>
- 
+
     <div class="authbar">
       <div id="userInfo" style="font-weight:700;">접속 대기 중...</div>
       <div id="statusChip" style="font-size:12px; color:var(--muted)">GUEST</div>
     </div>
- 
+
     <section class="grid">
       <div class="card" id="c1">
         <h2>📚 북마크</h2>
@@ -119,15 +126,21 @@
         <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">인생 목표 별자리 시각화</p>
         <a class="action starmap-action" id="a6" href="./starmap/">실행하기</a>
       </div>
+      <!-- ★ 새로 추가된 Weekly Plan 카드 -->
+      <div class="card weekly-card" id="c8">
+        <h2>📅 Weekly Plan</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">주간 타임블록 & Todo 배치</p>
+        <a class="action weekly-action" id="a8" href="./weekly-plan/">실행하기</a>
+      </div>
     </section>
- 
+
     <footer>&copy; Second Brain Lab. 업무 전용 공간입니다.</footer>
   </div>
- 
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
- 
+
     const firebaseConfig = {
       apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
       authDomain: "itnews-82b60.firebaseapp.com",
@@ -137,19 +150,19 @@
       messagingSenderId: "719267588761",
       appId: "1:719267588761:web:3c4607cb799620f9446608"
     };
- 
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const ALLOWED = "eundang@gmail.com";
- 
+
     document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
     document.getElementById("logoutBtn").onclick = () => signOut(auth);
- 
+
     onAuthStateChanged(auth, (user) => {
       const isAllowed = user && user.email.toLowerCase() === ALLOWED;
-      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6", "c7"];
-      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6", "a7"];
- 
+      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"];
+      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"];
+
       if (isAllowed) {
         document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
         document.getElementById("hMsg").innerText = "SBL Toolkit의 모든 권한이 활성화되었습니다.";
@@ -176,5 +189,3 @@
   </script>
 </body>
 </html>
- 
-
