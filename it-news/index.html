@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBL Toolkit · IT 뉴스 리더</title>
+    <title>SBL Toolkit · IT 뉴스 리더v2 </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
@@ -104,7 +104,7 @@
                 const data = snapshot.val();
                 if (data) {
                     state = data;
-                    state.categories.forEach(c => { if (!c.keywords) c.keywords = []; });
+                    state.categories.forEach(c => { if (!c.keywords) c.keywords = []; c.keywords.forEach(k => { if (!k.allNews) k.allNews = []; if (k.showMore === undefined) k.showMore = false; }); });
                 } else {
                     state = { categories: [{ id: 'cat_default', name: "AI & Tech", keywords: [] }] };
                     saveCloudData();
@@ -162,6 +162,39 @@
             return `${date.getMonth() + 1}월 ${date.getDate()}일`;
         };
 
+        const getTodayKey = () => new Date().toISOString().slice(0, 10);
+        const isRssUrl = (value) => /^https?:\/\//i.test(value.trim()) && /(rss|feed|xml)/i.test(value.trim());
+        const stripHtml = (html = '') => html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+
+        // RSS를 직접 제공하는 주요 소스. 입력창에 아래 이름 또는 RSS URL을 넣으면 키워드 검색이 아니라 해당 RSS를 가져옵니다.
+        const RSS_SOURCES = [
+            { aliases: ['전자신문', 'etnews', '전자신문 ai', 'etnews ai'], label: '전자신문 RSS', urls: ['https://rss.etnews.com/Section901.xml', 'https://rss.etnews.com/04046.xml'] },
+            { aliases: ['경향신문', '경향', 'khan'], label: '경향신문 RSS', urls: ['https://www.khan.co.kr/rss/rssdata/total_news.xml', 'https://www.khan.co.kr/rss/rssdata/science_news.xml'] },
+            { aliases: ['sbs', 'sbs뉴스', 'sbs 뉴스'], label: 'SBS 뉴스 RSS', urls: ['https://news.sbs.co.kr/news/headlineRssFeed.do?plink=RSSREADER', 'https://news.sbs.co.kr/news/TopicRssFeed.do?plink=RSSREADER'] },
+            { aliases: ['연합뉴스tv', '연합뉴스티비', 'yonhapnewstv'], label: '연합뉴스TV RSS', urls: ['https://www.yonhapnewstv.co.kr/browse/feed/', 'https://www.yonhapnewstv.co.kr/category/news/economy/feed/'] },
+            { aliases: ['정책브리핑', 'korea.kr', '정부정책', '정책뉴스'], label: '정책브리핑 RSS', urls: ['https://www.korea.kr/rss/policy.xml', 'https://www.korea.kr/rss/dept_fsc.xml'] }
+        ];
+
+        function resolveRssSource(name) {
+            const raw = name.trim();
+            const normalized = raw.toLowerCase().replace(/\s+/g, '');
+            if (isRssUrl(raw)) return { label: '직접 입력 RSS', urls: [raw] };
+            return RSS_SOURCES.find(src => src.aliases.some(a => a.toLowerCase().replace(/\s+/g, '') === normalized));
+        }
+
+        async function fetchRssItems(rssUrl) {
+            const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+            const data = await res.json();
+            if (data.status !== 'ok') return [];
+            return data.items.map(i => ({
+                title: stripHtml(i.title),
+                url: i.link,
+                summary: (stripHtml(i.description || i.content || '').substring(0, 100) || 'RSS 기사입니다.') + '...',
+                timestamp: new Date(i.pubDate || i.pubdate || Date.now()).getTime(),
+                source: rssUrl
+            }));
+        }
+
         window.renderDashboard = () => {
             const container = document.getElementById('categories-container');
             container.innerHTML = '';
@@ -178,7 +211,7 @@
                     </div>
                     <div class="p-4">
                         <div class="flex space-x-3 mb-4">
-                            <input type="text" id="input-${category.id}" onkeydown="if(event.key==='Enter') addKeyword('${category.id}')" placeholder="키워드 입력 후 엔터" class="flex-grow border border-gray-300 rounded-lg px-4 py-2">
+                            <input type="text" id="input-${category.id}" onkeydown="if(event.key==='Enter') addKeyword('${category.id}')" placeholder="키워드 또는 신문사/RSS URL 입력 후 엔터" class="flex-grow border border-gray-300 rounded-lg px-4 py-2">
                             <button onclick="addKeyword('${category.id}')" class="bg-indigo-500 text-white p-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5"></i></button>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -186,7 +219,7 @@
                         </div>
                     </div>`;
                 container.appendChild(section);
-                category.keywords.forEach(k => { if(!k.news && !k.loading) fetchNews(category.id, k.id); });
+                category.keywords.forEach(k => { if ((!k.news || k.lastFetchedDate !== getTodayKey()) && !k.loading) fetchNews(category.id, k.id); });
             });
             lucide.createIcons();
         };
@@ -219,7 +252,7 @@
                 <div class="border border-gray-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-lg font-semibold text-gray-800">${k.name}</h3>
+                            <div><h3 class="text-lg font-semibold text-gray-800">${k.name}</h3>${k.sourceLabel ? `<p class="text-[11px] text-gray-400 mt-0.5">${k.sourceLabel}</p>` : ''}</div>
                             <button onclick="deleteKeyword('${catId}', '${k.id}')" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
                         </div>
                         <div class="news-content">${contentHtml}</div>
@@ -237,18 +270,32 @@
             const k = cat.keywords.find(k => k.id === keyId);
             k.loading = true; renderDashboard();
             try {
-                const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(k.name)}&hl=ko&gl=KR&ceid=KR:ko&num=15`;
-                const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
-                const data = await res.json();
-                if (data.status === 'ok') {
-                    k.allNews = data.items.map(i => ({
-                        title: i.title, url: i.link,
-                        summary: i.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...',
-                        timestamp: new Date(i.pubDate).getTime()
-                    })).sort((a,b) => b.timestamp - a.timestamp);
-                    k.news = k.allNews.slice(0, 3);
+                const rssSource = resolveRssSource(k.name);
+                let items = [];
+
+                if (rssSource) {
+                    k.sourceLabel = rssSource.label;
+                    const results = await Promise.all(rssSource.urls.map(url => fetchRssItems(url)));
+                    items = results.flat();
+                } else {
+                    k.sourceLabel = 'Google 뉴스 키워드 검색';
+                    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(k.name)}&hl=ko&gl=KR&ceid=KR:ko&num=15`;
+                    items = await fetchRssItems(rssUrl);
                 }
-            } catch (e) { k.error = "로드 실패"; }
+
+                const seen = new Set();
+                k.allNews = items
+                    .filter(i => i.title && i.url && !seen.has(i.url) && seen.add(i.url))
+                    .sort((a,b) => b.timestamp - a.timestamp);
+                k.news = k.allNews.slice(0, 3);
+                k.lastFetchedDate = getTodayKey();
+                k.lastFetchedAt = Date.now();
+                k.error = null;
+                saveCloudData();
+            } catch (e) {
+                console.error(e);
+                k.error = "로드 실패";
+            }
             k.loading = false; renderDashboard();
         };
 
