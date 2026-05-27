@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>강의 관리 · SBL Toolkit</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --accent: #0ea5e9;
+      --teal: #0d9488;
+      --purple: #7c3aed;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --orange: #f97316;
+      --r: 16px;
+      --shadow: 0 2px 12px rgba(0,0,0,.07);
+      --shadow-hover: 0 6px 24px rgba(0,0,0,.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+    }
+
+    /* ── HERO HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+      padding: 28px 0 0;
+      margin-bottom: 0;
+    }
+    .hero-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hero-left { display: flex; align-items: center; gap: 14px; }
+    .back-btn {
+      color: rgba(255,255,255,.8); text-decoration: none; font-size: 13px; font-weight: 500;
+      padding: 6px 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 20px; transition: 0.2s;
+      background: rgba(255,255,255,.12);
+    }
+    .back-btn:hover { background: rgba(255,255,255,.25); color: #fff; }
+    .hero-title {
+      font-size: 22px; font-weight: 900; color: #fff;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .hero-subtitle { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 2px; }
+
+    /* ── STATS STRIP (inside hero) ── */
+    .stats-strip {
+      max-width: 1100px; margin: 24px auto 0; padding: 0 24px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,.18); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.25); border-radius: var(--r);
+      padding: 18px 20px; text-align: center; transition: 0.2s;
+    }
+    .stat-card:hover { background: rgba(255,255,255,.28); }
+    .stat-value { font-size: 26px; font-weight: 900; color: #fff; }
+    .stat-label { font-size: 11px; color: rgba(255,255,255,.75); margin-top: 4px; font-weight: 700; letter-spacing: 0.3px; }
+
+    /* ── TABS (bottom of hero) ── */
+    .tabs-bar {
+      max-width: 1100px; margin: 20px auto 0; padding: 0 24px;
+      display: flex; gap: 0;
+    }
+    .tab {
+      padding: 11px 24px; cursor: pointer; border: none;
+      background: rgba(255,255,255,.15); color: rgba(255,255,255,.75);
+      font-weight: 700; font-size: 14px; transition: 0.2s;
+      border-radius: 12px 12px 0 0; font-family: inherit;
+    }
+    .tab:hover { background: rgba(255,255,255,.25); color: #fff; }
+    .tab.active { background: var(--bg); color: var(--teal); }
+
+    /* ── MAIN CONTENT ── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    }
+    .year-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .year-tab {
+      padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: 1.5px solid var(--line); background: #fff; color: var(--muted); transition: 0.2s;
+      font-family: inherit;
+    }
+    .year-tab:hover { border-color: var(--teal); color: var(--teal); }
+    .year-tab.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      border: 1.5px solid var(--line); background: #fff; color: var(--text);
+      padding: 10px 18px; border-radius: 12px; cursor: pointer; font-weight: 700;
+      font-size: 13px; transition: 0.2s; font-family: inherit;
+    }
+    .btn:hover { border-color: var(--teal); color: var(--teal); }
+    .btn.primary { background: var(--teal); color: #fff; border: none; box-shadow: 0 4px 14px rgba(13,148,136,.35); }
+    .btn.primary:hover { background: #0b7a72; box-shadow: 0 4px 20px rgba(13,148,136,.5); }
+    .btn.sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+    .btn.danger { background: #fff0f0; color: var(--red); border-color: #fecaca; }
+    .btn.danger:hover { background: #fee2e2; }
+    #addBtn {
+      background: #fff; color: var(--teal); border: 1.5px solid rgba(255,255,255,.5);
+      font-weight: 900; padding: 8px 20px; border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    #addBtn:hover { background: rgba(255,255,255,.9); }
+
+    /* ── LECTURE CARDS ── */
+    .lecture-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;
+    }
+    .lecture-card {
+      background: var(--card); border: 1.5px solid var(--line);
+      border-radius: var(--r); padding: 22px; cursor: pointer;
+      transition: 0.2s; box-shadow: var(--shadow);
+    }
+    .lecture-card:hover { border-color: var(--teal); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .org-name { font-weight: 900; font-size: 17px; color: var(--text); }
+    .status-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+    .status-의뢰 { background: #fef9c3; color: #92400e; }
+    .status-확정 { background: #dbeafe; color: #1d4ed8; }
+    .status-완료 { background: #d1fae5; color: #065f46; }
+    .status-취소 { background: #fee2e2; color: #991b1b; }
+    .lecture-topic { font-size: 14px; color: var(--muted); margin-bottom: 14px; font-weight: 500; }
+    .card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .meta-item { font-size: 12px; color: var(--muted); background: #f8fafc; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); }
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line);
+    }
+    .fee { font-weight: 900; color: var(--teal); font-size: 16px; }
+    .flag-icons { display: flex; gap: 6px; }
+    .flag { font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 700; }
+    .flag.ok { background: #d1fae5; color: #065f46; }
+    .flag.pending { background: #fef9c3; color: #92400e; }
+
+    /* ── EMPTY STATE ── */
+    .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
+    .empty-icon { font-size: 52px; margin-bottom: 14px; opacity: 0.5; }
+    .empty p { font-size: 15px; font-weight: 500; }
+
+    /* ── OVERLAY ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,.45);
+      backdrop-filter: blur(6px); z-index: 100;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .overlay.hidden { display: none; }
+
+    /* ── MODAL (form) ── */
+    .modal {
+      background: var(--card); border-radius: 20px;
+      width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+      padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+      padding-bottom: 18px; border-bottom: 2px solid var(--line);
+    }
+    .modal-header h3 { font-size: 20px; font-weight: 900; }
+    .modal-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #0d9488, #0ea5e9); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; background: #f8fafc; border: 1.5px solid var(--line);
+      border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px;
+      font-family: inherit; outline: none; transition: 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--teal); background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .checkbox-row { display: flex; gap: 20px; align-items: center; padding: 10px 0; }
+    .checkbox-row label { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; color: var(--text); font-weight: 700; }
+    .checkbox-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--teal); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+
+    /* ── DETAIL PANEL ── */
+    .detail-panel {
+      background: var(--card); border-radius: 20px;
+      width: 100%; max-width: 700px; max-height: 92vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .detail-banner {
+      background: linear-gradient(135deg, #0d9488, #0ea5e9);
+      padding: 28px 32px 24px; border-radius: 20px 20px 0 0;
+    }
+    .detail-banner-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .detail-title { font-size: 24px; font-weight: 900; color: #fff; }
+    .detail-topic { font-size: 14px; color: rgba(255,255,255,.8); margin-top: 6px; }
+    .detail-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-white { background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); padding: 7px 16px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit; transition: 0.2s; }
+    .btn-white:hover { background: rgba(255,255,255,.35); }
+    .close-btn { background: rgba(255,255,255,.15); border: none; color: rgba(255,255,255,.8); font-size: 16px; cursor: pointer; padding: 6px 10px; border-radius: 8px; transition: 0.2s; }
+    .close-btn:hover { background: rgba(255,255,255,.3); color: #fff; }
+
+    .detail-body { padding: 28px 32px; }
+    .detail-section { margin-bottom: 28px; }
+    .detail-section h4 {
+      font-size: 11px; font-weight: 900; color: var(--teal); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+    }
+    .detail-section h4::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(to right, #0d9488, transparent); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detail-item {
+      background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+    }
+    .detail-item label { font-size: 11px; color: var(--muted); font-weight: 700; display: block; margin-bottom: 4px; }
+    .detail-item .val { font-size: 14px; font-weight: 600; color: var(--text); }
+
+    .history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .history-item {
+      background: #f8fafc; border-left: 3px solid var(--teal);
+      border-radius: 0 10px 10px 0; padding: 12px 14px;
+    }
+    .history-date { font-size: 11px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+    .history-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+    .history-input-row { display: flex; gap: 8px; }
+    .history-input-row input {
+      flex: 1; background: #f8fafc; border: 1.5px solid var(--line);
+      border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px;
+      font-family: inherit; outline: none; transition: 0.2s;
+    }
+    .history-input-row input:focus { border-color: var(--teal); background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,.1); }
+
+    .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .photo-item { aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--line); cursor: pointer; }
+    .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-upload-label {
+      aspect-ratio: 1; border-radius: 10px; border: 2px dashed var(--line);
+      background: #f8fafc; color: var(--muted); cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 22px; gap: 4px; transition: 0.2s;
+    }
+    .photo-upload-label:hover { border-color: var(--teal); color: var(--teal); background: #f0faf9; }
+
+    .memo-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--text); background: #f8fafc; border-radius: 10px; padding: 14px 16px; border: 1px solid var(--line); }
+
+    @media (max-width: 640px) {
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+      .form-row { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .photo-grid { grid-template-columns: repeat(3, 1fr); }
+      .hero-subtitle { display: none; }
+      .detail-body { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO HEADER -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <a href="../" class="back-btn">← SBL Toolkit</a>
+      <div>
+        <div class="hero-title">📋 강의 관리</div>
+        <div class="hero-subtitle">강의 의뢰 · 일정 · 매출 통합 관리</div>
+      </div>
+    </div>
+    <button class="btn" id="addBtn">+ 강의 추가</button>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-month">-</div>
+      <div class="stat-label">이번달 강의</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-year" style="font-size:20px;">-</div>
+      <div class="stat-label">올해 매출 (완료 기준)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-unpaid">-</div>
+      <div class="stat-label">입금 대기</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-tax">-</div>
+      <div class="stat-label">세금계산서 미발급</div>
+    </div>
+  </div>
+
+  <div class="tabs-bar">
+    <button class="tab active" data-tab="upcoming">진행예정</button>
+    <button class="tab" data-tab="done">종료된 강의</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="wrap">
+  <div id="tab-upcoming">
+    <div class="lecture-grid" id="upcoming-list"></div>
+  </div>
+  <div id="tab-done" style="display:none;">
+    <div class="toolbar">
+      <div class="year-tabs" id="yearTabs"></div>
+    </div>
+    <div class="lecture-grid" id="done-list"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="overlay hidden" id="formOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">📋</div>
+      <h3 id="formTitle">강의 추가</h3>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>기관명 *</label>
+        <input type="text" id="f-org" placeholder="예: 삼성전자" />
+      </div>
+      <div class="form-group">
+        <label>담당자</label>
+        <input type="text" id="f-contact" placeholder="이름" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>연락처</label>
+        <input type="text" id="f-phone" placeholder="010-0000-0000" />
+      </div>
+      <div class="form-group">
+        <label>의뢰 경로</label>
+        <select id="f-source">
+          <option>메일</option>
+          <option>카톡</option>
+          <option>소개</option>
+          <option>기타</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>강의 주제 *</label>
+      <input type="text" id="f-topic" placeholder="예: 디지털 생산성 강의" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>날짜 *</label>
+        <input type="date" id="f-date" />
+      </div>
+      <div class="form-group">
+        <label>시간</label>
+        <input type="text" id="f-time" placeholder="예: 14:00~16:00" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>장소</label>
+        <input type="text" id="f-place" placeholder="강의 장소" />
+      </div>
+      <div class="form-group">
+        <label>방식</label>
+        <select id="f-method">
+          <option>오프라인</option>
+          <option>온라인</option>
+          <option>하이브리드</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>인원</label>
+        <input type="text" id="f-people" placeholder="예: 50명" />
+      </div>
+      <div class="form-group">
+        <label>강의료 (원)</label>
+        <input type="number" id="f-fee" placeholder="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>상태</label>
+      <select id="f-status">
+        <option>의뢰</option>
+        <option>확정</option>
+        <option>완료</option>
+        <option>취소</option>
+      </select>
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="f-paid" /> 입금 완료</label>
+      <label><input type="checkbox" id="f-tax" /> 세금계산서 발급</label>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>메모</label>
+      <textarea id="f-memo" placeholder="의뢰 내용, 특이사항 등"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" id="formDeleteBtn" style="display:none; margin-right:auto;">삭제</button>
+      <button class="btn" id="formCancelBtn">취소</button>
+      <button class="btn primary" id="formSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="overlay hidden" id="detailOverlay">
+  <div class="detail-panel">
+    <div class="detail-banner">
+      <div class="detail-banner-top">
+        <div>
+          <div class="detail-title" id="d-org"></div>
+          <div class="detail-topic" id="d-topic-banner"></div>
+        </div>
+        <div class="detail-actions">
+          <div id="d-status-wrap"></div>
+          <button class="btn-white" id="d-editBtn">수정</button>
+          <button class="close-btn" id="detailCloseBtn">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-body">
+      <div class="detail-section">
+        <h4>기본 정보</h4>
+        <div class="detail-grid">
+          <div class="detail-item"><label>강의 주제</label><div class="val" id="d-topic"></div></div>
+          <div class="detail-item"><label>날짜 / 시간</label><div class="val" id="d-datetime"></div></div>
+          <div class="detail-item"><label>장소 / 방식</label><div class="val" id="d-place"></div></div>
+          <div class="detail-item"><label>인원</label><div class="val" id="d-people"></div></div>
+          <div class="detail-item"><label>담당자 / 연락처</label><div class="val" id="d-contact"></div></div>
+          <div class="detail-item"><label>의뢰 경로</label><div class="val" id="d-source"></div></div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>재무</h4>
+        <div class="detail-grid">
+          <div class="detail-item"><label>강의료</label><div class="val" id="d-fee"></div></div>
+          <div class="detail-item"><label>입금 / 세금계산서</label><div class="val" id="d-finance"></div></div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>히스토리</h4>
+        <div class="history-list" id="d-history"></div>
+        <div class="history-input-row">
+          <input type="text" id="historyInput" placeholder="내용 추가 (카톡 내용, 메모 등) — Enter" />
+          <button class="btn primary sm" id="historyAddBtn">추가</button>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>메모 / 리뷰</h4>
+        <div class="memo-text" id="d-memo"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, updateDoc, deleteDoc,
+    doc, onSnapshot, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+    authDomain: "itnews-82b60.firebaseapp.com",
+    databaseURL: "https://itnews-82b60-default-rtdb.firebaseio.com",
+    projectId: "itnews-82b60",
+    storageBucket: "itnews-82b60.firebasestorage.app",
+    messagingSenderId: "719267588761",
+    appId: "1:719267588761:web:3c4607cb799620f9446608"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const ALLOWED = "eundang@gmail.com";
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user || user.email.toLowerCase() !== ALLOWED) {
+      window.location.href = "../";
+    }
+  });
+
+  let lectures = [];
+  let currentId = null;
+  let currentTab = "upcoming";
+  let currentYear = new Date().getFullYear();
+  let editingId = null;
+
+  const q = query(collection(db, "lectures"), orderBy("date", "desc"));
+  onSnapshot(q, (snap) => {
+    lectures = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderStats();
+    renderList();
+    if (currentId) {
+      const updated = lectures.find(x => x.id === currentId);
+      if (updated) refreshDetail(updated);
+    }
+  });
+
+  // ── STATS ──────────────────────────────────────────
+  function renderStats() {
+    const now = new Date();
+    const thisMonth = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    const thisYear = String(now.getFullYear());
+    const monthCount = lectures.filter(l => l.date?.startsWith(thisMonth) && l.status !== "취소").length;
+    const yearFee = lectures
+      .filter(l => l.date?.startsWith(thisYear) && l.status === "완료")
+      .reduce((s, l) => s + (Number(l.fee) || 0), 0);
+    const unpaid = lectures.filter(l => l.status === "완료" && !l.paid).length;
+    const noTax = lectures.filter(l => l.status === "완료" && !l.tax).length;
+    document.getElementById("stat-month").textContent = monthCount;
+    document.getElementById("stat-year").textContent = yearFee ? yearFee.toLocaleString() + "원" : "0원";
+    document.getElementById("stat-unpaid").textContent = unpaid;
+    document.getElementById("stat-tax").textContent = noTax;
+  }
+
+  // ── TABS ───────────────────────────────────────────
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      currentTab = t.dataset.tab;
+      document.getElementById("tab-upcoming").style.display = currentTab === "upcoming" ? "" : "none";
+      document.getElementById("tab-done").style.display = currentTab === "done" ? "" : "none";
+      renderList();
+    });
+  });
+
+  // ── RENDER ─────────────────────────────────────────
+  function renderList() {
+    if (currentTab === "upcoming") {
+      const list = lectures.filter(l => l.status === "의뢰" || l.status === "확정")
+        .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      renderCards("upcoming-list", list);
+    } else {
+      const doneList = lectures.filter(l => l.status === "완료" || l.status === "취소");
+      const years = [...new Set(doneList.map(l => l.date?.slice(0, 4)).filter(Boolean))].sort((a, b) => b - a);
+      if (years.length && !years.includes(String(currentYear))) currentYear = Number(years[0]);
+      const yearTabsEl = document.getElementById("yearTabs");
+      yearTabsEl.innerHTML = years.map(y =>
+        `<button class="year-tab ${String(currentYear) === y ? "active" : ""}" data-year="${y}">${y}</button>`
+      ).join("") || "<span style='color:var(--muted);font-size:13px;'>종료된 강의가 없습니다</span>";
+      yearTabsEl.querySelectorAll(".year-tab").forEach(b => {
+        b.addEventListener("click", () => { currentYear = Number(b.dataset.year); renderList(); });
+      });
+      const list = doneList.filter(l => l.date?.startsWith(String(currentYear)));
+      renderCards("done-list", list);
+    }
+  }
+
+  function renderCards(containerId, list) {
+    const el = document.getElementById(containerId);
+    if (!list.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><p>강의가 없습니다</p></div>`;
+      return;
+    }
+    el.innerHTML = list.map(l => {
+      const fee = l.fee ? Number(l.fee).toLocaleString() + "원" : "-";
+      const financeFlags = l.status === "완료" ? `
+        <span class="flag ${l.paid ? "ok" : "pending"}">${l.paid ? "입금완료" : "입금대기"}</span>
+        <span class="flag ${l.tax ? "ok" : "pending"}">${l.tax ? "계산서발급" : "계산서미발급"}</span>` : "";
+      return `<div class="lecture-card" data-id="${l.id}">
+        <div class="card-header">
+          <div class="org-name">${esc(l.org)}</div>
+          <span class="status-badge status-${l.status}">${l.status}</span>
+        </div>
+        <div class="lecture-topic">${esc(l.topic)}</div>
+        <div class="card-meta">
+          <span class="meta-item">📅 ${l.date || "-"}</span>
+          ${l.time ? `<span class="meta-item">🕐 ${esc(l.time)}</span>` : ""}
+          ${l.method ? `<span class="meta-item">📍 ${esc(l.method)}</span>` : ""}
+          ${l.people ? `<span class="meta-item">👥 ${esc(l.people)}</span>` : ""}
+        </div>
+        <div class="card-footer">
+          <span class="fee">${fee}</span>
+          <div class="flag-icons">${financeFlags}</div>
+        </div>
+      </div>`;
+    }).join("");
+    el.querySelectorAll(".lecture-card").forEach(card => {
+      card.addEventListener("click", () => openDetail(card.dataset.id));
+    });
+  }
+
+  // ── FORM ───────────────────────────────────────────
+  function openForm(id = null) {
+    editingId = id;
+    document.getElementById("formTitle").textContent = id ? "강의 수정" : "강의 추가";
+    document.getElementById("formDeleteBtn").style.display = id ? "block" : "none";
+    const l = id ? lectures.find(x => x.id === id) : {};
+    const set = (elId, val) => document.getElementById(elId).value = val || "";
+    set("f-org", l.org); set("f-contact", l.contact); set("f-phone", l.phone);
+    set("f-source", l.source || "메일"); set("f-topic", l.topic); set("f-date", l.date);
+    set("f-time", l.time); set("f-place", l.place); set("f-method", l.method || "오프라인");
+    set("f-people", l.people); set("f-fee", l.fee || ""); set("f-status", l.status || "의뢰");
+    set("f-memo", l.memo);
+    document.getElementById("f-paid").checked = !!l.paid;
+    document.getElementById("f-tax").checked = !!l.tax;
+    document.getElementById("formOverlay").classList.remove("hidden");
+  }
+
+  async function saveForm() {
+    const data = {
+      org: document.getElementById("f-org").value.trim(),
+      contact: document.getElementById("f-contact").value.trim(),
+      phone: document.getElementById("f-phone").value.trim(),
+      source: document.getElementById("f-source").value,
+      topic: document.getElementById("f-topic").value.trim(),
+      date: document.getElementById("f-date").value,
+      time: document.getElementById("f-time").value.trim(),
+      place: document.getElementById("f-place").value.trim(),
+      method: document.getElementById("f-method").value,
+      people: document.getElementById("f-people").value.trim(),
+      fee: Number(document.getElementById("f-fee").value) || 0,
+      status: document.getElementById("f-status").value,
+      paid: document.getElementById("f-paid").checked,
+      tax: document.getElementById("f-tax").checked,
+      memo: document.getElementById("f-memo").value.trim(),
+    };
+    if (!data.org || !data.topic || !data.date) { alert("기관명, 강의 주제, 날짜는 필수입니다."); return; }
+    if (editingId) {
+      await updateDoc(doc(db, "lectures", editingId), data);
+    } else {
+      data.history = []; data.photos = []; data.createdAt = serverTimestamp();
+      await addDoc(collection(db, "lectures"), data);
+    }
+    document.getElementById("formOverlay").classList.add("hidden");
+  }
+
+  document.getElementById("addBtn").addEventListener("click", () => openForm());
+  document.getElementById("formCancelBtn").addEventListener("click", () => document.getElementById("formOverlay").classList.add("hidden"));
+  document.getElementById("formSaveBtn").addEventListener("click", saveForm);
+  document.getElementById("formDeleteBtn").addEventListener("click", async () => {
+    if (!editingId || !confirm("이 강의를 삭제하시겠습니까?")) return;
+    await deleteDoc(doc(db, "lectures", editingId));
+    document.getElementById("formOverlay").classList.add("hidden");
+  });
+  document.getElementById("formOverlay").addEventListener("click", e => {
+    if (e.target === document.getElementById("formOverlay")) document.getElementById("formOverlay").classList.add("hidden");
+  });
+
+  // ── DETAIL ─────────────────────────────────────────
+  function openDetail(id) {
+    currentId = id;
+    const l = lectures.find(x => x.id === id);
+    if (!l) return;
+    refreshDetail(l);
+    document.getElementById("detailOverlay").classList.remove("hidden");
+  }
+
+  function refreshDetail(l) {
+    document.getElementById("d-org").textContent = l.org || "-";
+    document.getElementById("d-topic-banner").textContent = l.topic || "";
+    document.getElementById("d-status-wrap").innerHTML = `<span class="status-badge status-${l.status}" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);">${l.status}</span>`;
+    document.getElementById("d-topic").textContent = l.topic || "-";
+    document.getElementById("d-datetime").textContent = [l.date, l.time].filter(Boolean).join("  ") || "-";
+    document.getElementById("d-place").textContent = [l.place, l.method].filter(Boolean).join(" / ") || "-";
+    document.getElementById("d-people").textContent = l.people || "-";
+    document.getElementById("d-contact").textContent = [l.contact, l.phone].filter(Boolean).join(" / ") || "-";
+    document.getElementById("d-source").textContent = l.source || "-";
+    document.getElementById("d-fee").textContent = l.fee ? Number(l.fee).toLocaleString() + "원" : "-";
+    document.getElementById("d-finance").innerHTML = `
+      <span class="flag ${l.paid ? "ok" : "pending"}">${l.paid ? "입금완료" : "입금대기"}</span>
+      <span class="flag ${l.tax ? "ok" : "pending"}" style="margin-left:6px;">${l.tax ? "계산서발급" : "계산서미발급"}</span>`;
+    document.getElementById("d-memo").textContent = l.memo || "-";
+    renderHistory(l.history || []);
+  }
+
+  function renderHistory(history) {
+    const el = document.getElementById("d-history");
+    if (!history.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:4px 0;">기록이 없습니다</div>`; return; }
+    el.innerHTML = [...history].reverse().map(h =>
+      `<div class="history-item"><div class="history-date">${h.date}</div><div class="history-text">${esc(h.text)}</div></div>`
+    ).join("");
+  }
+
+  async function addHistory() {
+    const text = document.getElementById("historyInput").value.trim();
+    if (!text || !currentId) return;
+    const l = lectures.find(x => x.id === currentId);
+    const history = [...(l.history || []), {
+      date: new Date().toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" }),
+      text
+    }];
+    await updateDoc(doc(db, "lectures", currentId), { history });
+    document.getElementById("historyInput").value = "";
+  }
+
+  document.getElementById("historyAddBtn").addEventListener("click", addHistory);
+  document.getElementById("historyInput").addEventListener("keydown", e => { if (e.key === "Enter") addHistory(); });
+  document.getElementById("d-editBtn").addEventListener("click", () => {
+    document.getElementById("detailOverlay").classList.add("hidden");
+    openForm(currentId);
+  });
+  document.getElementById("detailCloseBtn").addEventListener("click", () => {
+    document.getElementById("detailOverlay").classList.add("hidden");
+    currentId = null;
+  });
+  document.getElementById("detailOverlay").addEventListener("click", e => {
+    if (e.target === document.getElementById("detailOverlay")) {
+      document.getElementById("detailOverlay").classList.add("hidden");
+      currentId = null;
+    }
+  });
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+</script>
+</body>
+</html>

@@ -64,6 +64,13 @@
     .action.active { background: var(--accent); color: #fff; pointer-events: auto; }
     .action.active.starmap-action { background: #3a8f2f; color: #fff; }
     .action.active.weekly-action { background: #3b82f6; color: #fff; }
+
+    /* 강의 관리 카드 특별 스타일 */
+    .card.lecture-card.unlocked {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.05);
+    }
+    .action.active.lecture-action { background: #b45309; color: #fff; }
     footer { margin-top: 60px; text-align: center; font-size: 12px; opacity: 0.4; }
     @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
@@ -132,6 +139,12 @@
         <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">주간 타임블록 & Todo 배치</p>
         <a class="action weekly-action" id="a8" href="./weekly-plan/">실행하기</a>
       </div>
+      <!-- ★ 강의 관리 카드 -->
+      <div class="card lecture-card" id="c9">
+        <h2>📋 강의 관리</h2>
+        <p style="font-size:0.9rem; color:var(--muted); margin-bottom:0;">강의 의뢰 · 일정 · 매출 관리</p>
+        <a class="action lecture-action" id="a9" href="./lecture/">실행하기</a>
+      </div>
     </section>
 
     <footer>&copy; Second Brain Lab. 업무 전용 공간입니다.</footer>
@@ -160,8 +173,8 @@
 
     onAuthStateChanged(auth, (user) => {
       const isAllowed = user && user.email.toLowerCase() === ALLOWED;
-      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"];
-      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8"];
+      const ids    = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"];
+      const btnIds = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"];
 
       if (isAllowed) {
         document.getElementById("hTitle").innerText = "반갑습니다, 대표님";
