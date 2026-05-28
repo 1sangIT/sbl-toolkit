@@ -251,6 +251,59 @@
 
     .memo-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--text); background: #f8fafc; border-radius: 10px; padding: 14px 16px; border: 1px solid var(--line); }
 
+    /* ── CALENDAR ── */
+    .calendar-wrap { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px; border-bottom: 1px solid var(--line);
+    }
+    .cal-title { font-size: 18px; font-weight: 900; }
+    .cal-nav { display: flex; gap: 8px; }
+    .cal-nav button {
+      width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line);
+      background: #fff; cursor: pointer; font-size: 16px; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; transition: 0.2s;
+    }
+    .cal-nav button:hover { border-color: var(--teal); color: var(--teal); }
+    .cal-today-btn {
+      padding: 6px 14px; border-radius: 8px; border: 1.5px solid var(--line);
+      background: #fff; cursor: pointer; font-size: 12px; font-weight: 700;
+      color: var(--muted); font-family: inherit; transition: 0.2s;
+    }
+    .cal-today-btn:hover { border-color: var(--teal); color: var(--teal); }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .cal-dow {
+      text-align: center; padding: 12px 4px; font-size: 11px; font-weight: 700;
+      color: var(--muted); letter-spacing: 0.5px; border-bottom: 1px solid var(--line);
+    }
+    .cal-dow:first-child { color: #ef4444; }
+    .cal-dow:last-child { color: #3b82f6; }
+    .cal-cell {
+      min-height: 100px; padding: 8px; border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line); vertical-align: top; transition: 0.15s;
+    }
+    .cal-cell:nth-child(7n) { border-right: none; }
+    .cal-cell.other-month { background: #fafafa; }
+    .cal-cell.today { background: #f0fdf9; }
+    .cal-cell.today .cal-day { background: var(--teal); color: #fff; }
+    .cal-day {
+      width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 13px; font-weight: 700; margin-bottom: 6px;
+      cursor: default;
+    }
+    .cal-cell.sunday .cal-day { color: #ef4444; }
+    .cal-cell.saturday .cal-day { color: #3b82f6; }
+    .cal-event {
+      font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 6px;
+      margin-bottom: 3px; cursor: pointer; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; transition: 0.15s; display: block;
+    }
+    .cal-event:hover { filter: brightness(0.92); }
+    .cal-event.status-의뢰 { background: #fef9c3; color: #92400e; }
+    .cal-event.status-확정 { background: #dbeafe; color: #1d4ed8; }
+    .cal-event.status-완료 { background: #d1fae5; color: #065f46; }
+    .cal-event.status-취소 { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
+
     @media (max-width: 640px) {
       .stats-strip { grid-template-columns: repeat(2, 1fr); }
       .form-row { grid-template-columns: 1fr; }
@@ -258,6 +311,11 @@
       .photo-grid { grid-template-columns: repeat(3, 1fr); }
       .hero-subtitle { display: none; }
       .detail-body { padding: 20px; }
+      .cal-cell { min-height: 60px; padding: 4px; }
+      .cal-event { display: none; }
+      .cal-cell.has-event::after {
+        content: '●'; font-size: 8px; color: var(--teal); display: block; text-align: center;
+      }
     }
   </style>
 </head>
@@ -298,6 +356,7 @@
   <div class="tabs-bar">
     <button class="tab active" data-tab="upcoming">진행예정</button>
     <button class="tab" data-tab="done">종료된 강의</button>
+    <button class="tab" data-tab="calendar">📅 캘린더</button>
   </div>
 </div>
 
@@ -311,6 +370,21 @@
       <div class="year-tabs" id="yearTabs"></div>
     </div>
     <div class="lecture-grid" id="done-list"></div>
+  </div>
+  <div id="tab-calendar" style="display:none;">
+    <div class="calendar-wrap">
+      <div class="cal-header">
+        <div class="cal-title" id="calTitle"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="cal-today-btn" id="calTodayBtn">오늘</button>
+          <div class="cal-nav">
+            <button id="calPrevBtn">◀</button>
+            <button id="calNextBtn">▶</button>
+          </div>
+        </div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
   </div>
 </div>
 
@@ -498,6 +572,8 @@
   let currentTab = "upcoming";
   let currentYear = new Date().getFullYear();
   let editingId = null;
+  let currentCalYear = new Date().getFullYear();
+  let currentCalMonth = new Date().getMonth();
 
   const q = query(collection(db, "lectures"), orderBy("date", "desc"));
   onSnapshot(q, (snap) => {
@@ -535,12 +611,14 @@
       currentTab = t.dataset.tab;
       document.getElementById("tab-upcoming").style.display = currentTab === "upcoming" ? "" : "none";
       document.getElementById("tab-done").style.display = currentTab === "done" ? "" : "none";
+      document.getElementById("tab-calendar").style.display = currentTab === "calendar" ? "" : "none";
       renderList();
     });
   });
 
   // ── RENDER ─────────────────────────────────────────
   function renderList() {
+    if (currentTab === "calendar") { renderCalendar(); return; }
     if (currentTab === "upcoming") {
       const list = lectures.filter(l => l.status === "의뢰" || l.status === "확정")
         .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
@@ -719,6 +797,74 @@
   function esc(s) {
     return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
+
+  // ── CALENDAR ───────────────────────────────────────
+  function renderCalendar() {
+    const y = currentCalYear, m = currentCalMonth;
+    document.getElementById("calTitle").textContent = `${y}년 ${m + 1}월`;
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const lastDate = new Date(y, m + 1, 0).getDate();
+    const prevLast = new Date(y, m, 0).getDate();
+    const todayObj = new Date();
+    const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth()+1).padStart(2,'0')}-${String(todayObj.getDate()).padStart(2,'0')}`;
+
+    const DOW = ["일","월","화","수","목","금","토"];
+    let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join("");
+
+    // 이전달 채우기
+    for (let i = firstDow - 1; i >= 0; i--) {
+      html += `<div class="cal-cell other-month"><div class="cal-day" style="color:var(--muted);">${prevLast - i}</div></div>`;
+    }
+
+    // 이번달
+    for (let d = 1; d <= lastDate; d++) {
+      const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow = new Date(y, m, d).getDay();
+      const isToday = dateStr === todayStr;
+      const dayLectures = lectures.filter(l => l.date === dateStr);
+
+      let cls = "cal-cell";
+      if (isToday) cls += " today";
+      if (dow === 0) cls += " sunday";
+      if (dow === 6) cls += " saturday";
+      if (dayLectures.length) cls += " has-event";
+
+      const events = dayLectures.map(l =>
+        `<div class="cal-event status-${l.status}" data-id="${l.id}" title="${esc(l.org)} — ${esc(l.topic)}">${esc(l.org)}</div>`
+      ).join("");
+
+      html += `<div class="${cls}"><div class="cal-day">${d}</div>${events}</div>`;
+    }
+
+    // 다음달 채우기
+    const totalCells = Math.ceil((firstDow + lastDate) / 7) * 7;
+    for (let d = 1; d <= totalCells - firstDow - lastDate; d++) {
+      html += `<div class="cal-cell other-month"><div class="cal-day" style="color:var(--muted);">${d}</div></div>`;
+    }
+
+    document.getElementById("calGrid").innerHTML = html;
+
+    document.getElementById("calGrid").querySelectorAll(".cal-event").forEach(el => {
+      el.addEventListener("click", e => { e.stopPropagation(); openDetail(el.dataset.id); });
+    });
+  }
+
+  document.getElementById("calPrevBtn").addEventListener("click", () => {
+    currentCalMonth--;
+    if (currentCalMonth < 0) { currentCalMonth = 11; currentCalYear--; }
+    renderCalendar();
+  });
+  document.getElementById("calNextBtn").addEventListener("click", () => {
+    currentCalMonth++;
+    if (currentCalMonth > 11) { currentCalMonth = 0; currentCalYear++; }
+    renderCalendar();
+  });
+  document.getElementById("calTodayBtn").addEventListener("click", () => {
+    currentCalYear = new Date().getFullYear();
+    currentCalMonth = new Date().getMonth();
+    renderCalendar();
+  });
 </script>
 </body>
 </html>
