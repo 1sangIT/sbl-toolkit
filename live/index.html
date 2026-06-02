@@ -291,6 +291,9 @@
 
     <!-- 강사용 차트 (강사 모드에서만) -->
     <div id="surveyChart" style="display:none;margin-top:24px;">
+      <div style="text-align:right;margin-bottom:12px;">
+        <button class="btn sm" id="surveyDeleteBtn" style="background:#fee2e2;color:#991b1b;border:none;">🗑 설문 전체 삭제</button>
+      </div>
       <div class="survey-box">
         <div class="chart-wrap" id="chartWrap"></div>
         <div class="chart-total" id="chartTotal"></div>
@@ -469,6 +472,21 @@
     document.getElementById("surveyForm").style.display = "none";
     document.getElementById("surveyDone").style.display = "";
   }
+
+  // 설문 전체 삭제
+  document.getElementById("surveyDeleteBtn").addEventListener("click", async () => {
+    if (!confirm("설문 응답 전체를 삭제하시겠습니까?")) return;
+    const { getDocs, deleteDoc: delDoc } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
+    const allDocs = await getDocs(collection(db, "live_survey", LECTURE_ID, "responses"));
+    await Promise.all(allDocs.docs.map(d => delDoc(d.ref)));
+    localStorage.removeItem("survey_submitted_" + LECTURE_ID);
+    document.getElementById("surveyForm").style.display = "";
+    document.getElementById("surveyDone").style.display = "none";
+    document.querySelectorAll(".survey-option input[type=checkbox]").forEach(cb => {
+      cb.checked = false;
+      cb.closest(".survey-option").classList.remove("selected");
+    });
+  });
 
   // 제출
   document.getElementById("surveySubmitBtn").addEventListener("click", async () => {
