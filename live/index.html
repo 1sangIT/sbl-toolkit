@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>강의 라이브 · Second Brain Lab</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --teal: #0d9488;
+      --accent: #0ea5e9;
+      --r: 16px;
+      --shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
+      color: var(--text); background: var(--bg); min-height: 100vh;
+    }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+      padding: 28px 0 0;
+    }
+    .hero-inner {
+      max-width: 900px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .hero-title { font-size: 22px; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .hero-subtitle { font-size: 13px; color: rgba(255,255,255,.7); margin-top: 3px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3);
+      border-radius: 20px; padding: 6px 14px; color: #fff; font-size: 13px; font-weight: 700;
+    }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #f87171;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* TABS */
+    .tabs-bar {
+      max-width: 900px; margin: 20px auto 0; padding: 0 24px;
+      display: flex; gap: 0;
+    }
+    .tab {
+      padding: 11px 28px; cursor: pointer; border: none;
+      background: rgba(255,255,255,.15); color: rgba(255,255,255,.75);
+      font-weight: 700; font-size: 14px; transition: 0.2s;
+      border-radius: 12px 12px 0 0; font-family: inherit;
+    }
+    .tab:hover { background: rgba(255,255,255,.25); color: #fff; }
+    .tab.active { background: var(--bg); color: var(--teal); }
+
+    /* WRAP */
+    .wrap { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── 강의노트 ── */
+    .note-toolbar {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    }
+    .note-toolbar h2 { font-size: 16px; font-weight: 900; color: var(--text); }
+    .pw-form { display: flex; gap: 8px; align-items: center; }
+    .pw-form input {
+      padding: 7px 12px; border: 1.5px solid var(--line); border-radius: 10px;
+      font-family: inherit; font-size: 13px; outline: none; width: 140px;
+      background: #fff; transition: 0.2s;
+    }
+    .pw-form input:focus { border-color: var(--teal); }
+    .btn {
+      border: none; padding: 8px 16px; border-radius: 10px; cursor: pointer;
+      font-weight: 700; font-size: 13px; transition: 0.2s; font-family: inherit;
+    }
+    .btn.primary { background: var(--teal); color: #fff; }
+    .btn.primary:hover { background: #0b7a72; }
+    .btn.sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn.ghost { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.3); }
+    .btn.ghost:hover { background: rgba(255,255,255,.25); }
+
+    .note-editor {
+      background: #fff; border: 2px solid var(--teal); border-radius: var(--r);
+      padding: 20px; min-height: 300px; font-size: 15px; line-height: 1.8;
+      outline: none; box-shadow: 0 0 0 4px rgba(13,148,136,.08);
+    }
+    .note-editor[contenteditable="false"] {
+      border-color: var(--line); box-shadow: none; background: #fff;
+    }
+    .note-viewer {
+      background: #fff; border: 1.5px solid var(--line); border-radius: var(--r);
+      padding: 20px; min-height: 300px; font-size: 15px; line-height: 1.8;
+      box-shadow: var(--shadow);
+    }
+    .note-placeholder { color: var(--muted); font-style: italic; }
+    .save-bar {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;
+    }
+    .editor-locked { display: none; }
+
+    /* ── Q&A ── */
+    .qa-input-box {
+      background: #fff; border-radius: var(--r); padding: 20px;
+      box-shadow: var(--shadow); margin-bottom: 20px;
+      border: 1.5px solid var(--line);
+    }
+    .qa-input-box h3 { font-size: 14px; font-weight: 900; color: var(--teal); margin-bottom: 12px; }
+    .qa-name-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .qa-name-row input, .qa-text-row textarea {
+      border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 14px;
+      font-family: inherit; font-size: 14px; outline: none; transition: 0.2s;
+      background: #f8fafc; width: 100%;
+    }
+    .qa-name-row input { width: 160px; flex-shrink: 0; }
+    .qa-name-row input:focus, .qa-text-row textarea:focus {
+      border-color: var(--teal); background: #fff;
+    }
+    .qa-text-row { display: flex; gap: 8px; align-items: flex-end; }
+    .qa-text-row textarea { resize: none; min-height: 60px; flex: 1; }
+    .qa-list { display: flex; flex-direction: column; gap: 12px; }
+    .qa-item {
+      background: #fff; border: 1.5px solid var(--line); border-radius: var(--r);
+      padding: 16px 20px; box-shadow: var(--shadow);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .qa-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+    .qa-text { font-size: 15px; line-height: 1.7; color: var(--text); }
+    .qa-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+
+    /* ── 실습 ── */
+    .padlet-wrap { border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
+
+    @media (max-width: 640px) {
+      .hero-subtitle { display: none; }
+      .tab { padding: 10px 16px; font-size: 13px; }
+      .qa-name-row { flex-direction: column; }
+      .qa-name-row input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-title">🎤 강의 라이브</div>
+      <div class="hero-subtitle">Second Brain Lab · 실시간 강의 공간</div>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+  <div class="tabs-bar">
+    <button class="tab active" data-tab="note">📝 강의노트</button>
+    <button class="tab" data-tab="qa">💬 Q&A</button>
+    <button class="tab" data-tab="practice">🖼 실습</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 강의노트 탭 -->
+  <div id="tab-note">
+    <div class="note-toolbar">
+      <h2>강의노트</h2>
+      <div class="pw-form" id="pwForm">
+        <input type="password" id="pwInput" placeholder="강사 비밀번호" />
+        <button class="btn primary sm" id="pwBtn">편집</button>
+      </div>
+    </div>
+    <div id="noteViewer" class="note-viewer">
+      <span class="note-placeholder" id="notePlaceholder">강의노트가 여기에 실시간으로 표시됩니다.</span>
+      <div id="noteContent"></div>
+    </div>
+    <div id="noteEditorWrap" style="display:none;">
+      <div id="noteEditor" class="note-editor" contenteditable="true" placeholder="강의 내용을 입력하세요. 링크, 핵심 키워드, 참고자료 등을 자유롭게..."></div>
+      <div class="save-bar">
+        <button class="btn sm" id="cancelEditBtn" style="background:#f1f5f9;color:var(--muted);">취소</button>
+        <button class="btn primary sm" id="saveNoteBtn">저장 · 공유</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q&A 탭 -->
+  <div id="tab-qa" style="display:none;">
+    <div class="qa-input-box">
+      <h3>💬 질문하기</h3>
+      <div class="qa-name-row">
+        <input type="text" id="qaName" placeholder="이름 (선택, 익명 가능)" maxlength="20" />
+        <div style="flex:1;display:flex;gap:8px;align-items:flex-end;">
+          <textarea id="qaText" placeholder="질문이나 코멘트를 입력하세요..." rows="2" style="flex:1;resize:none;border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;font-family:inherit;font-size:14px;outline:none;background:#f8fafc;"></textarea>
+          <button class="btn primary" id="qaSubmitBtn">올리기</button>
+        </div>
+      </div>
+    </div>
+    <div class="qa-list" id="qaList">
+      <div class="qa-empty">아직 질문이 없습니다. 첫 번째로 질문해보세요!</div>
+    </div>
+  </div>
+
+  <!-- 실습 탭 -->
+  <div id="tab-practice" style="display:none;">
+    <div class="padlet-wrap">
+      <div class="padlet-embed" style="border:1px solid rgba(0,0,0,0.1);border-radius:2px;box-sizing:border-box;overflow:hidden;position:relative;width:100%;background:#F4F4F4">
+        <p style="padding:0;margin:0">
+          <iframe src="https://padlet.com/embed/j8v7cbflc97uocbr" frameborder="0" allow="camera;microphone;geolocation;display-capture;clipboard-write" style="width:100%;height:608px;display:block;padding:0;margin:0"></iframe>
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import {
+    getFirestore, doc, onSnapshot, setDoc, collection,
+    addDoc, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
+    authDomain: "itnews-82b60.firebaseapp.com",
+    projectId: "itnews-82b60",
+    storageBucket: "itnews-82b60.firebasestorage.app",
+    messagingSenderId: "719267588761",
+    appId: "1:719267588761:web:3c4607cb799620f9446608"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const LECTURE_ID = "default";
+  const PW = "sblab2026";
+  let isEditor = false;
+
+  // ── TABS ──
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      ["note","qa","practice"].forEach(id => {
+        document.getElementById("tab-" + id).style.display = t.dataset.tab === id ? "" : "none";
+      });
+    });
+  });
+
+  // ── 강의노트 실시간 구독 ──
+  const noteRef = doc(db, "live_notes", LECTURE_ID);
+  onSnapshot(noteRef, snap => {
+    const data = snap.data();
+    const content = data?.content || "";
+    const placeholder = document.getElementById("notePlaceholder");
+    const noteContent = document.getElementById("noteContent");
+    if (content) {
+      placeholder.style.display = "none";
+      noteContent.innerHTML = content;
+    } else {
+      placeholder.style.display = "";
+      noteContent.innerHTML = "";
+    }
+    if (isEditor) {
+      document.getElementById("noteEditor").innerHTML = content;
+    }
+  });
+
+  // ── 비밀번호 편집 ──
+  document.getElementById("pwBtn").addEventListener("click", () => {
+    const pw = document.getElementById("pwInput").value;
+    if (pw === PW) {
+      isEditor = true;
+      document.getElementById("pwForm").style.display = "none";
+      document.getElementById("noteViewer").style.display = "none";
+      document.getElementById("noteEditorWrap").style.display = "";
+    } else {
+      alert("비밀번호가 맞지 않습니다.");
+      document.getElementById("pwInput").value = "";
+    }
+  });
+  document.getElementById("pwInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("pwBtn").click();
+  });
+
+  document.getElementById("cancelEditBtn").addEventListener("click", () => {
+    isEditor = false;
+    document.getElementById("pwForm").style.display = "";
+    document.getElementById("pwInput").value = "";
+    document.getElementById("noteViewer").style.display = "";
+    document.getElementById("noteEditorWrap").style.display = "none";
+  });
+
+  document.getElementById("saveNoteBtn").addEventListener("click", async () => {
+    const content = document.getElementById("noteEditor").innerHTML;
+    await setDoc(noteRef, { content, updatedAt: serverTimestamp() }, { merge: true });
+    const btn = document.getElementById("saveNoteBtn");
+    btn.textContent = "저장됨 ✓";
+    setTimeout(() => btn.textContent = "저장 · 공유", 1500);
+  });
+
+  // ── Q&A 실시간 구독 ──
+  const qaRef = collection(db, "live_qa", LECTURE_ID, "questions");
+  const qaQuery = query(qaRef, orderBy("createdAt", "desc"));
+  onSnapshot(qaQuery, snap => {
+    const list = document.getElementById("qaList");
+    if (snap.empty) {
+      list.innerHTML = `<div class="qa-empty">아직 질문이 없습니다. 첫 번째로 질문해보세요!</div>`;
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const q = d.data();
+      const name = q.name || "익명";
+      const time = q.createdAt?.toDate
+        ? q.createdAt.toDate().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+        : "";
+      return `<div class="qa-item">
+        <div class="qa-meta">${esc(name)} · ${time}</div>
+        <div class="qa-text">${esc(q.text)}</div>
+      </div>`;
+    }).join("");
+  });
+
+  document.getElementById("qaSubmitBtn").addEventListener("click", submitQA);
+  document.getElementById("qaText").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitQA(); }
+  });
+
+  async function submitQA() {
+    const text = document.getElementById("qaText").value.trim();
+    if (!text) return;
+    const name = document.getElementById("qaName").value.trim();
+    await addDoc(collection(db, "live_qa", LECTURE_ID, "questions"), {
+      name: name || "",
+      text,
+      createdAt: serverTimestamp()
+    });
+    document.getElementById("qaText").value = "";
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+</script>
+</body>
+</html>
