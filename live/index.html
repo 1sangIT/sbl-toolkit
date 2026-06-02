@@ -389,6 +389,7 @@
     document.getElementById("noteViewer").style.display = "none";
     document.getElementById("noteEditorWrap").style.display = "";
     document.getElementById("surveyChart").style.display = "";
+    renderQAList(latestQASnap);
   }
 
   document.getElementById("pwBtn").addEventListener("click", () => {
@@ -425,9 +426,11 @@
   // ── Q&A 실시간 구독 ──
   const qaRef = collection(db, "live_qa", LECTURE_ID, "questions");
   const qaQuery = query(qaRef, orderBy("createdAt", "desc"));
-  onSnapshot(qaQuery, snap => {
+  let latestQASnap = null;
+
+  function renderQAList(snap) {
     const list = document.getElementById("qaList");
-    if (snap.empty) {
+    if (!snap || snap.empty) {
       list.innerHTML = `<div class="qa-empty">아직 질문이 없습니다. 첫 번째로 질문해보세요!</div>`;
       return;
     }
@@ -454,7 +457,6 @@
       </div>`;
     }).join("");
 
-    // 답변 이벤트
     list.querySelectorAll(".reply-btn").forEach(btn => {
       btn.addEventListener("click", () => saveReply(btn.dataset.id, btn));
     });
@@ -463,6 +465,11 @@
         if (e.key === "Enter") saveReply(inp.dataset.id, inp);
       });
     });
+  }
+
+  onSnapshot(qaQuery, snap => {
+    latestQASnap = snap;
+    renderQAList(snap);
   });
 
   async function saveReply(docId, el) {
