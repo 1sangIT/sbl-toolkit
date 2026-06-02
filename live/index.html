@@ -151,9 +151,41 @@
     /* ── 실습 ── */
     .padlet-wrap { border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
 
+    /* ── 설문 ── */
+    .survey-box {
+      background: #fff; border: 1.5px solid var(--line); border-radius: var(--r);
+      padding: 24px 28px; margin-bottom: 20px; box-shadow: var(--shadow);
+    }
+    .survey-box h3 { font-size: 15px; font-weight: 900; margin-bottom: 16px; color: var(--text); }
+    .survey-options { display: flex; flex-wrap: wrap; gap: 10px; }
+    .survey-option {
+      display: flex; align-items: center; gap: 8px;
+      background: #f8fafc; border: 1.5px solid var(--line); border-radius: 10px;
+      padding: 9px 16px; cursor: pointer; transition: 0.2s; user-select: none;
+      font-size: 14px; font-weight: 600;
+    }
+    .survey-option:hover { border-color: var(--teal); background: #f0fdf9; }
+    .survey-option input[type=checkbox] { accent-color: var(--teal); width: 16px; height: 16px; }
+    .survey-option.selected { border-color: var(--teal); background: #f0fdf9; color: var(--teal); }
+    .survey-submit-row { margin-top: 20px; display: flex; justify-content: flex-end; }
+    .survey-done {
+      text-align: center; padding: 40px 20px; color: var(--muted);
+      font-size: 15px; font-weight: 700;
+    }
+    /* 차트 */
+    .chart-wrap { display: flex; flex-direction: column; gap: 24px; }
+    .chart-section h4 { font-size: 13px; font-weight: 900; color: var(--teal); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .chart-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .chart-label { font-size: 13px; font-weight: 700; width: 70px; flex-shrink: 0; }
+    .chart-bar-bg { flex: 1; background: #f1f5f9; border-radius: 8px; height: 28px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; background: linear-gradient(90deg, #0d9488, #0ea5e9); border-radius: 8px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 10px; min-width: 0; }
+    .chart-count { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; }
+    .chart-pct { font-size: 12px; color: var(--muted); font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; }
+    .chart-total { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
     @media (max-width: 640px) {
       .hero-subtitle { display: none; }
-      .tab { padding: 10px 16px; font-size: 13px; }
+      .tab { padding: 10px 12px; font-size: 12px; }
       .qa-name-row { flex-direction: column; }
       .qa-name-row input { width: 100%; }
     }
@@ -180,6 +212,7 @@
     <button class="tab active" data-tab="note">📝 강의노트</button>
     <button class="tab" data-tab="qa">💬 Q&A</button>
     <button class="tab" data-tab="practice">🖼 실습</button>
+    <button class="tab" data-tab="survey">📊 설문</button>
   </div>
 </div>
 
@@ -223,6 +256,49 @@
     </div>
   </div>
 
+  <!-- 설문 탭 -->
+  <div id="tab-survey" style="display:none;">
+
+    <!-- 수강생용 설문 폼 -->
+    <div id="surveyForm">
+      <div class="survey-box">
+        <h3>Q1. 어떤 AI를 주로 사용중인가요? <span style="font-weight:400;color:var(--muted);font-size:13px;">(복수 선택 가능)</span></h3>
+        <div class="survey-options" id="q1options">
+          <label class="survey-option"><input type="checkbox" value="제미나이" /> 제미나이</label>
+          <label class="survey-option"><input type="checkbox" value="GPT" /> GPT</label>
+          <label class="survey-option"><input type="checkbox" value="클로드" /> 클로드</label>
+          <label class="survey-option"><input type="checkbox" value="기타" /> 기타</label>
+        </div>
+      </div>
+      <div class="survey-box">
+        <h3>Q2. 유료로 이용하고 있는 AI는 어떤건가요? <span style="font-weight:400;color:var(--muted);font-size:13px;">(복수 선택 가능)</span></h3>
+        <div class="survey-options" id="q2options">
+          <label class="survey-option"><input type="checkbox" value="제미나이" /> 제미나이</label>
+          <label class="survey-option"><input type="checkbox" value="GPT" /> GPT</label>
+          <label class="survey-option"><input type="checkbox" value="클로드" /> 클로드</label>
+          <label class="survey-option"><input type="checkbox" value="기타" /> 기타</label>
+        </div>
+      </div>
+      <div class="survey-submit-row">
+        <button class="btn primary" id="surveySubmitBtn">제출하기</button>
+      </div>
+    </div>
+
+    <!-- 제출 완료 메시지 -->
+    <div id="surveyDone" class="survey-done" style="display:none;">
+      ✅ 응답이 제출되었습니다. 감사합니다!
+    </div>
+
+    <!-- 강사용 차트 (강사 모드에서만) -->
+    <div id="surveyChart" style="display:none;margin-top:24px;">
+      <div class="survey-box">
+        <div class="chart-wrap" id="chartWrap"></div>
+        <div class="chart-total" id="chartTotal"></div>
+      </div>
+    </div>
+
+  </div>
+
   <!-- 실습 탭 -->
   <div id="tab-practice" style="display:none;">
     <div class="padlet-wrap">
@@ -264,7 +340,7 @@
     t.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
       t.classList.add("active");
-      ["note","qa","practice"].forEach(id => {
+      ["note","qa","practice","survey"].forEach(id => {
         document.getElementById("tab-" + id).style.display = t.dataset.tab === id ? "" : "none";
       });
     });
@@ -297,6 +373,7 @@
     document.getElementById("qaDeleteBar").style.display = "";
     document.getElementById("noteViewer").style.display = "none";
     document.getElementById("noteEditorWrap").style.display = "";
+    document.getElementById("surveyChart").style.display = "";
   }
 
   document.getElementById("pwBtn").addEventListener("click", () => {
@@ -376,6 +453,71 @@
     });
     document.getElementById("qaText").value = "";
   }
+
+  // ── 설문 ──
+  const SURVEY_OPTIONS = ["제미나이", "GPT", "클로드", "기타"];
+
+  // 체크박스 선택 스타일
+  document.querySelectorAll(".survey-option input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      cb.closest(".survey-option").classList.toggle("selected", cb.checked);
+    });
+  });
+
+  // 이미 제출했으면 폼 숨기기
+  if (localStorage.getItem("survey_submitted_" + LECTURE_ID)) {
+    document.getElementById("surveyForm").style.display = "none";
+    document.getElementById("surveyDone").style.display = "";
+  }
+
+  // 제출
+  document.getElementById("surveySubmitBtn").addEventListener("click", async () => {
+    const q1 = [...document.querySelectorAll("#q1options input:checked")].map(x => x.value);
+    const q2 = [...document.querySelectorAll("#q2options input:checked")].map(x => x.value);
+    if (!q1.length && !q2.length) { alert("최소 하나 이상 선택해주세요."); return; }
+    await addDoc(collection(db, "live_survey", LECTURE_ID, "responses"), {
+      q1, q2, createdAt: serverTimestamp()
+    });
+    localStorage.setItem("survey_submitted_" + LECTURE_ID, "1");
+    document.getElementById("surveyForm").style.display = "none";
+    document.getElementById("surveyDone").style.display = "";
+  });
+
+  // 실시간 집계 (강사 모드용)
+  const surveyRef = collection(db, "live_survey", LECTURE_ID, "responses");
+  onSnapshot(surveyRef, snap => {
+    const total = snap.size;
+    const count = { q1: {}, q2: {} };
+    SURVEY_OPTIONS.forEach(o => { count.q1[o] = 0; count.q2[o] = 0; });
+    snap.docs.forEach(d => {
+      const r = d.data();
+      (r.q1 || []).forEach(v => { if (count.q1[v] !== undefined) count.q1[v]++; });
+      (r.q2 || []).forEach(v => { if (count.q2[v] !== undefined) count.q2[v]++; });
+    });
+
+    const renderChart = (title, data) => `
+      <div class="chart-section">
+        <h4>${title}</h4>
+        ${SURVEY_OPTIONS.map(opt => {
+          const n = data[opt] || 0;
+          const pct = total ? Math.round(n / total * 100) : 0;
+          return `<div class="chart-bar-row">
+            <div class="chart-label">${opt}</div>
+            <div class="chart-bar-bg">
+              <div class="chart-bar-fill" style="width:${pct}%">
+                ${n > 0 ? `<span class="chart-count">${n}명</span>` : ""}
+              </div>
+            </div>
+            <div class="chart-pct">${pct}%</div>
+          </div>`;
+        }).join("")}
+      </div>`;
+
+    document.getElementById("chartWrap").innerHTML =
+      renderChart("Q1. 주로 사용하는 AI", count.q1) +
+      renderChart("Q2. 유료 이용 AI", count.q2);
+    document.getElementById("chartTotal").textContent = `총 응답 ${total}명`;
+  });
 
   function esc(s) {
     return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
