@@ -250,8 +250,10 @@
 
   <!-- Q&A 탭 -->
   <div id="tab-qa" style="display:none;">
-    <div id="qaDeleteBar" style="display:none;text-align:right;margin-bottom:12px;">
-      <button class="btn sm" id="qaDeleteBtn" style="background:#fee2e2;color:#991b1b;border:none;">🗑 Q&A 전체 삭제</button>
+    <div id="qaDeleteBar" style="display:none;margin-bottom:12px;">
+      <div style="text-align:right;">
+        <button class="btn sm" id="qaDeleteBtn" style="background:#fee2e2;color:#991b1b;border:none;">🗑 Q&A 전체 삭제</button>
+      </div>
     </div>
     <div class="qa-input-box">
       <h3>💬 질문하기</h3>
@@ -457,27 +459,44 @@
       </div>`;
     }).join("");
 
-    list.querySelectorAll(".reply-btn").forEach(btn => {
-      btn.addEventListener("click", () => saveReply(btn.dataset.id, btn));
-    });
-    list.querySelectorAll(".reply-input").forEach(inp => {
-      inp.addEventListener("keydown", e => {
-        if (e.key === "Enter") saveReply(inp.dataset.id, inp);
-      });
-    });
   }
+
+  // event delegation — survives re-renders
+  document.getElementById("qaList").addEventListener("click", e => {
+    const btn = e.target.closest(".reply-btn");
+    if (btn && isEditor) saveReply(btn.dataset.id, btn);
+  });
+  document.getElementById("qaList").addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.classList.contains("reply-input") && isEditor) {
+      e.preventDefault();
+      const docId = e.target.dataset.id;
+      const btn = document.querySelector(`.reply-btn[data-id="${docId}"]`);
+      if (btn) saveReply(docId, btn);
+    }
+  });
 
   onSnapshot(qaQuery, snap => {
     latestQASnap = snap;
     renderQAList(snap);
   });
 
-  async function saveReply(docId, el) {
+  async function saveReply(docId, btn) {
     const input = document.querySelector(`.reply-input[data-id="${docId}"]`);
+    if (!input) return;
     const reply = input.value.trim();
-    await updateDoc(doc(db, "live_qa", LECTURE_ID, "questions", docId), { reply });
-    el.textContent = el.tagName === "BUTTON" ? "저장됨 ✓" : el.textContent;
-    setTimeout(() => { if (el.tagName === "BUTTON") el.textContent = "저장"; }, 1500);
+    btn.disabled = true;
+    btn.textContent = "저장 중...";
+    try {
+      await updateDoc(doc(db, "live_qa", LECTURE_ID, "questions", docId), { reply });
+      btn.textContent = "저장됨 ✓";
+      btn.style.background = "#16a34a";
+      // onSnapshot will re-render the list — no need to reset button manually
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "저장";
+      btn.style.background = "";
+      alert("답변 저장 실패: " + e.message + "\n\nFirebase 콘솔에서 Firestore 규칙을 확인해주세요.\nlive_qa 하위 컬렉션 write 권한이 필요합니다.");
+    }
   }
 
   document.getElementById("qaSubmitBtn").addEventListener("click", submitQA);
