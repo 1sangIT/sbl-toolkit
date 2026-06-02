@@ -147,6 +147,18 @@
     .qa-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
     .qa-text { font-size: 15px; line-height: 1.7; color: var(--text); }
     .qa-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+    .qa-reply {
+      margin-top: 10px; padding: 10px 14px;
+      background: #f0fdf9; border-left: 3px solid var(--teal); border-radius: 0 8px 8px 0;
+      font-size: 13px; line-height: 1.6; color: var(--text);
+    }
+    .qa-reply-label { font-size: 11px; font-weight: 900; color: var(--teal); margin-bottom: 4px; }
+    .qa-reply-input-row { display: flex; gap: 8px; margin-top: 10px; }
+    .qa-reply-input-row input {
+      flex: 1; border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 12px;
+      font-family: inherit; font-size: 13px; outline: none; background: #f8fafc; transition: 0.2s;
+    }
+    .qa-reply-input-row input:focus { border-color: var(--teal); background: #fff; }
 
     /* ── 실습 ── */
     .padlet-wrap { border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
@@ -318,7 +330,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import {
-    getFirestore, doc, onSnapshot, setDoc, collection,
+    getFirestore, doc, onSnapshot, setDoc, updateDoc, collection,
     addDoc, query, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
@@ -425,12 +437,41 @@
       const time = q.createdAt?.toDate
         ? q.createdAt.toDate().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
         : "";
-      return `<div class="qa-item">
+      const replyHtml = q.reply
+        ? `<div class="qa-reply"><div class="qa-reply-label">💬 강사 답변</div>${esc(q.reply)}</div>`
+        : "";
+      const replyInput = isEditor
+        ? `<div class="qa-reply-input-row">
+            <input type="text" class="reply-input" data-id="${d.id}" placeholder="답변 입력 후 Enter" value="${esc(q.reply || '')}" />
+            <button class="btn primary sm reply-btn" data-id="${d.id}">저장</button>
+           </div>`
+        : "";
+      return `<div class="qa-item" data-id="${d.id}">
         <div class="qa-meta">${esc(name)} · ${time}</div>
         <div class="qa-text">${esc(q.text)}</div>
+        ${replyHtml}
+        ${replyInput}
       </div>`;
     }).join("");
+
+    // 답변 이벤트
+    list.querySelectorAll(".reply-btn").forEach(btn => {
+      btn.addEventListener("click", () => saveReply(btn.dataset.id, btn));
+    });
+    list.querySelectorAll(".reply-input").forEach(inp => {
+      inp.addEventListener("keydown", e => {
+        if (e.key === "Enter") saveReply(inp.dataset.id, inp);
+      });
+    });
   });
+
+  async function saveReply(docId, el) {
+    const input = document.querySelector(`.reply-input[data-id="${docId}"]`);
+    const reply = input.value.trim();
+    await updateDoc(doc(db, "live_qa", LECTURE_ID, "questions", docId), { reply });
+    el.textContent = el.tagName === "BUTTON" ? "저장됨 ✓" : el.textContent;
+    setTimeout(() => { if (el.tagName === "BUTTON") el.textContent = "저장"; }, 1500);
+  }
 
   document.getElementById("qaSubmitBtn").addEventListener("click", submitQA);
   document.getElementById("qaText").addEventListener("keydown", e => {
