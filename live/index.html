@@ -473,11 +473,16 @@
     const btn = document.getElementById("saveNoteBtn");
     btn.disabled = true;
     btn.textContent = "저장 중...";
-    await addDoc(noteBlocksRef, { content, period: period || "", createdAt: serverTimestamp() });
-    document.getElementById("noteTextarea").value = "";
+    try {
+      await addDoc(noteBlocksRef, { content, period: period || "", createdAt: serverTimestamp() });
+      document.getElementById("noteTextarea").value = "";
+      btn.textContent = "저장됨 ✓";
+      setTimeout(() => btn.textContent = "저장 · 추가", 1500);
+    } catch(e) {
+      alert("저장 실패: " + e.message);
+      btn.textContent = "저장 · 추가";
+    }
     btn.disabled = false;
-    btn.textContent = "저장됨 ✓";
-    setTimeout(() => btn.textContent = "저장 · 추가", 1500);
   });
 
   // 블록 삭제 (편집자만)
