@@ -561,12 +561,6 @@
   const db = getFirestore(app);
   const ALLOWED = "eundang@gmail.com";
 
-  onAuthStateChanged(auth, (user) => {
-    if (!user || user.email.toLowerCase() !== ALLOWED) {
-      window.location.href = "../";
-    }
-  });
-
   let lectures = [];
   let currentId = null;
   let currentTab = "upcoming";
@@ -574,16 +568,24 @@
   let editingId = null;
   let currentCalYear = new Date().getFullYear();
   let currentCalMonth = new Date().getMonth();
+  let unsubscribe = null;
 
-  const q = query(collection(db, "lectures"), orderBy("date", "desc"));
-  onSnapshot(q, (snap) => {
-    lectures = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderStats();
-    renderList();
-    if (currentId) {
-      const updated = lectures.find(x => x.id === currentId);
-      if (updated) refreshDetail(updated);
+  onAuthStateChanged(auth, (user) => {
+    if (!user || user.email.toLowerCase() !== ALLOWED) {
+      window.location.href = "../";
+      return;
     }
+    if (unsubscribe) return; // already listening
+    const q = query(collection(db, "lectures"), orderBy("date", "desc"));
+    unsubscribe = onSnapshot(q, (snap) => {
+      lectures = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderStats();
+      renderList();
+      if (currentId) {
+        const updated = lectures.find(x => x.id === currentId);
+        if (updated) refreshDetail(updated);
+      }
+    });
   });
 
   // ── STATS ──────────────────────────────────────────
