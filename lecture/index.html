@@ -585,6 +585,9 @@
         const updated = lectures.find(x => x.id === currentId);
         if (updated) refreshDetail(updated);
       }
+    }, (err) => {
+      console.error("[Firestore Error]", err.code, err.message);
+      alert("데이터 로드 실패: " + err.code + "\n" + err.message);
     });
   });
 
