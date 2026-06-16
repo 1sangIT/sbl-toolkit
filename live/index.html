@@ -421,7 +421,7 @@
           </div>
           ${delBtn}
         </div>
-        <div class="note-block-content">${esc(b.content)}</div>
+        <div class="note-block-content">${linkify(b.content)}</div>
       </div>`;
     }).join("");
   }
@@ -699,6 +699,12 @@
 
   function esc(s) {
     return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function linkify(s) {
+    return esc(s).replace(
+      /(https?:\/\/[^\s<>"]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#2563eb;word-break:break-all;">$1</a>'
+    );
   }
 </script>
 </body>
