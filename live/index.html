@@ -394,7 +394,7 @@
 
   // ── 강의노트 블록 구독 ──
   const noteBlocksRef = collection(db, "live_notes", LECTURE_ID, "blocks");
-  const noteBlocksQuery = query(noteBlocksRef, orderBy("createdAt", "asc"));
+  const noteBlocksQuery = query(noteBlocksRef, orderBy("createdAt", "desc"));
 
   function renderNoteBlocks(snap) {
     const list = document.getElementById("noteBlockList");
