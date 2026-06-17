@@ -256,7 +256,10 @@
   <div id="tab-note">
     <div class="note-toolbar">
       <h2>강의노트</h2>
-      <button class="btn sm" id="downloadNoteBtn" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">⬇ 다운받기</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn sm" id="downloadNoteBtn" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">⬇ 다운받기</button>
+        <button class="btn sm" id="deleteAllNoteBtn" style="display:none;background:#fee2e2;color:#991b1b;border:none;">🗑 전체 삭제</button>
+      </div>
     </div>
     <!-- 편집자 입력 영역 -->
     <div id="noteEditorWrap" style="display:none;">
@@ -440,6 +443,7 @@
     document.getElementById("qaDeleteBar").style.display = "";
     document.getElementById("noteEditorWrap").style.display = "";
     document.getElementById("surveyChart").style.display = "";
+    document.getElementById("deleteAllNoteBtn").style.display = "";
     renderQAList(latestQASnap);
     renderNoteBlocks(latestBlockSnap);
   }
@@ -595,6 +599,15 @@
   document.getElementById("qaSubmitBtn").addEventListener("click", submitQA);
   document.getElementById("qaText").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitQA(); }
+  });
+
+  // ── 강의노트 전체 삭제 ──
+  document.getElementById("deleteAllNoteBtn").addEventListener("click", async () => {
+    if (!isEditor) return;
+    if (!confirm("강의노트 전체를 삭제하시겠습니까?")) return;
+    const { getDocs, deleteDoc: delDoc } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
+    const allDocs = await getDocs(collection(db, "live_notes", LECTURE_ID, "blocks"));
+    await Promise.all(allDocs.docs.map(d => delDoc(d.ref)));
   });
 
   // ── Q&A 전체 삭제 ──
