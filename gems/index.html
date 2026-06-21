@@ -18,11 +18,56 @@
     .back-btn {
       color: #94a3b8; text-decoration: none; font-size: 13px;
       padding: 5px 12px; border: 1px solid #1e2d50; border-radius: 20px;
-      transition: 0.2s;
     }
     .back-btn:hover { color: #fff; border-color: #8b5cf6; }
     .topbar-title { font-size: 15px; font-weight: 700; color: #e2e8f0; }
-    .topbar-sub { font-size: 12px; color: #64748b; margin-left: auto; }
+    .edit-btn {
+      margin-left: auto;
+      background: #1e2d50; color: #94a3b8; border: 1px solid #2d3f66;
+      padding: 5px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+      font-family: inherit;
+    }
+    .edit-btn:hover { background: #2d3f66; color: #fff; }
+
+    /* 설정 패널 */
+    .settings {
+      background: #0d1528;
+      border-bottom: 1px solid #1e2d50;
+      padding: 14px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .settings.open { display: flex; }
+    .url-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .url-label {
+      font-size: 12px; font-weight: 700; color: #8b5cf6;
+      width: 52px; flex-shrink: 0;
+    }
+    .url-input {
+      flex: 1;
+      background: #0f1730; border: 1px solid #2d3f66; border-radius: 10px;
+      color: #e2e8f0; font-size: 13px; padding: 7px 12px;
+      font-family: inherit; outline: none;
+    }
+    .url-input:focus { border-color: #8b5cf6; }
+    .url-clear {
+      background: none; border: none; color: #475569; font-size: 16px;
+      cursor: pointer; padding: 4px 6px; border-radius: 6px; line-height: 1;
+    }
+    .url-clear:hover { color: #ef4444; background: #1e1e2e; }
+    .settings-actions {
+      display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px;
+    }
+    .btn-apply {
+      background: #6d28d9; color: #fff; border: none;
+      padding: 7px 20px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-apply:hover { background: #7c3aed; }
 
     .frames {
       display: grid;
@@ -31,28 +76,26 @@
       overflow: hidden;
     }
     .frame-wrap {
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
       border-right: 1px solid #1e2d50;
       overflow: hidden;
     }
     .frame-wrap:last-child { border-right: none; }
-
     .frame-label {
       padding: 6px 12px;
-      font-size: 11px; font-weight: 700; color: #94a3b8;
+      font-size: 11px; font-weight: 700; color: #64748b;
       background: #0d1528;
       border-bottom: 1px solid #1e2d50;
-      text-align: center;
-      letter-spacing: 0.5px;
+      text-align: center; letter-spacing: 0.5px;
     }
     iframe {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #fff;
+      flex: 1; width: 100%; height: 100%; border: none; background: #fff;
     }
+    .empty-frame {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: #2d3f66; font-size: 13px; flex-direction: column; gap: 8px;
+    }
+    .empty-frame span { font-size: 28px; }
   </style>
 </head>
 <body>
@@ -60,30 +103,95 @@
 <div class="topbar">
   <a class="back-btn" href="../index.html">← 홈</a>
   <div class="topbar-title">💎 Gems</div>
-  <div class="topbar-sub">주소 변경 → gems/index.html 에서 src="" 수정</div>
+  <button class="edit-btn" id="editBtn">⚙ URL 설정</button>
+</div>
+
+<div class="settings" id="settings">
+  <div class="url-row">
+    <div class="url-label">GEM 1</div>
+    <input class="url-input" id="url1" placeholder="https://..." />
+    <button class="url-clear" data-target="url1">×</button>
+  </div>
+  <div class="url-row">
+    <div class="url-label">GEM 2</div>
+    <input class="url-input" id="url2" placeholder="https://..." />
+    <button class="url-clear" data-target="url2">×</button>
+  </div>
+  <div class="url-row">
+    <div class="url-label">GEM 3</div>
+    <input class="url-input" id="url3" placeholder="https://..." />
+    <button class="url-clear" data-target="url3">×</button>
+  </div>
+  <div class="settings-actions">
+    <button class="btn-apply" id="applyBtn">적용</button>
+  </div>
 </div>
 
 <div class="frames">
-
   <div class="frame-wrap">
     <div class="frame-label">GEM 1</div>
-    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
-    <iframe src="" allowfullscreen></iframe>
+    <div id="slot1" style="display:contents;"></div>
   </div>
-
   <div class="frame-wrap">
     <div class="frame-label">GEM 2</div>
-    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
-    <iframe src="" allowfullscreen></iframe>
+    <div id="slot2" style="display:contents;"></div>
   </div>
-
   <div class="frame-wrap">
     <div class="frame-label">GEM 3</div>
-    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
-    <iframe src="" allowfullscreen></iframe>
+    <div id="slot3" style="display:contents;"></div>
   </div>
-
 </div>
 
+<script>
+  const KEYS = ["gems_url1", "gems_url2", "gems_url3"];
+  const inputs = [
+    document.getElementById("url1"),
+    document.getElementById("url2"),
+    document.getElementById("url3"),
+  ];
+  const slots = [
+    document.getElementById("slot1"),
+    document.getElementById("slot2"),
+    document.getElementById("slot3"),
+  ];
+
+  function renderSlot(i, url) {
+    if (url) {
+      slots[i].innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
+    } else {
+      slots[i].innerHTML = `<div class="empty-frame"><span>💎</span>URL 설정에서 주소를 입력하세요</div>`;
+    }
+  }
+
+  function load() {
+    KEYS.forEach((k, i) => {
+      const url = localStorage.getItem(k) || "";
+      inputs[i].value = url;
+      renderSlot(i, url);
+    });
+  }
+
+  document.getElementById("editBtn").addEventListener("click", () => {
+    document.getElementById("settings").classList.toggle("open");
+  });
+
+  document.querySelectorAll(".url-clear").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(btn.dataset.target).value = "";
+    });
+  });
+
+  document.getElementById("applyBtn").addEventListener("click", () => {
+    inputs.forEach((input, i) => {
+      const url = input.value.trim();
+      if (url) localStorage.setItem(KEYS[i], url);
+      else localStorage.removeItem(KEYS[i]);
+      renderSlot(i, url);
+    });
+    document.getElementById("settings").classList.remove("open");
+  });
+
+  load();
+</script>
 </body>
 </html>
