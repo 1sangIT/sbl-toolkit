@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gems · SBL Toolkit</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0b1020; color: #fff; font-family: -apple-system, "Apple SD Gothic Neo", sans-serif; height: 100vh; display: flex; flex-direction: column; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px;
+      background: #0f1730;
+      border-bottom: 1px solid #1e2d50;
+      flex-shrink: 0;
+    }
+    .back-btn {
+      color: #94a3b8; text-decoration: none; font-size: 13px;
+      padding: 5px 12px; border: 1px solid #1e2d50; border-radius: 20px;
+      transition: 0.2s;
+    }
+    .back-btn:hover { color: #fff; border-color: #8b5cf6; }
+    .topbar-title { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+    .topbar-sub { font-size: 12px; color: #64748b; margin-left: auto; }
+
+    .frames {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      flex: 1;
+      overflow: hidden;
+    }
+    .frame-wrap {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #1e2d50;
+      overflow: hidden;
+    }
+    .frame-wrap:last-child { border-right: none; }
+
+    .frame-label {
+      padding: 6px 12px;
+      font-size: 11px; font-weight: 700; color: #94a3b8;
+      background: #0d1528;
+      border-bottom: 1px solid #1e2d50;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    iframe {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back-btn" href="../index.html">← 홈</a>
+  <div class="topbar-title">💎 Gems</div>
+  <div class="topbar-sub">주소 변경 → gems/index.html 에서 src="" 수정</div>
+</div>
+
+<div class="frames">
+
+  <div class="frame-wrap">
+    <div class="frame-label">GEM 1</div>
+    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
+    <iframe src="" allowfullscreen></iframe>
+  </div>
+
+  <div class="frame-wrap">
+    <div class="frame-label">GEM 2</div>
+    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
+    <iframe src="" allowfullscreen></iframe>
+  </div>
+
+  <div class="frame-wrap">
+    <div class="frame-label">GEM 3</div>
+    <!-- ↓ 주소 변경: src="" 안에 URL 입력 -->
+    <iframe src="" allowfullscreen></iframe>
+  </div>
+
+</div>
+
+</body>
+</html>
