@@ -251,6 +251,26 @@
 
     .memo-text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; color: var(--text); background: #f8fafc; border-radius: 10px; padding: 14px 16px; border: 1px solid var(--line); }
 
+    /* ── FILE ATTACHMENTS ── */
+    .file-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .file-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+    }
+    .file-icon { font-size: 20px; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .file-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .file-upload-label {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      border: 2px dashed var(--line); border-radius: 10px; padding: 12px 16px;
+      background: #f8fafc; color: var(--muted); font-size: 13px; font-weight: 700;
+      transition: 0.2s;
+    }
+    .file-upload-label:hover { border-color: var(--teal); color: var(--teal); background: #f0faf9; }
+    .upload-progress { font-size: 12px; color: var(--teal); margin-top: 6px; display: none; }
+
     /* ── CALENDAR ── */
     .calendar-wrap { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
     .cal-header {
@@ -531,6 +551,16 @@
       </div>
 
       <div class="detail-section">
+        <h4>첨부 파일</h4>
+        <div class="file-list" id="d-files"></div>
+        <label class="file-upload-label" id="fileUploadLabel">
+          <span>📎</span> 파일 추가 (이미지, PDF, 문서 등)
+          <input type="file" id="fileInput" style="display:none;" multiple accept="*/*" />
+        </label>
+        <div class="upload-progress" id="uploadProgress">업로드 중...</div>
+      </div>
+
+      <div class="detail-section">
         <h4>메모 / 리뷰</h4>
         <div class="memo-text" id="d-memo"></div>
       </div>
@@ -545,6 +575,9 @@
     getFirestore, collection, addDoc, updateDoc, deleteDoc,
     doc, onSnapshot, query, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import {
+    getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
@@ -559,6 +592,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const storage = getStorage(app);
   const ALLOWED = "eundang@gmail.com";
 
   let lectures = [];
@@ -760,6 +794,7 @@
       <span class="flag ${l.tax ? "ok" : "pending"}" style="margin-left:6px;">${l.tax ? "계산서발급" : "계산서미발급"}</span>`;
     document.getElementById("d-memo").textContent = l.memo || "-";
     renderHistory(l.history || []);
+    renderFiles(l.files || []);
   }
 
   function renderHistory(history) {
@@ -784,6 +819,93 @@
 
   document.getElementById("historyAddBtn").addEventListener("click", addHistory);
   document.getElementById("historyInput").addEventListener("keydown", e => { if (e.key === "Enter") addHistory(); });
+
+  // ── FILE ATTACHMENTS ───────────────────────────────
+  function getFileIcon(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    if (['jpg','jpeg','png','gif','webp','heic'].includes(ext)) return '🖼️';
+    if (ext === 'pdf') return '📄';
+    if (['doc','docx'].includes(ext)) return '📝';
+    if (['xls','xlsx'].includes(ext)) return '📊';
+    if (['ppt','pptx'].includes(ext)) return '📊';
+    if (['zip','rar'].includes(ext)) return '🗜️';
+    return '📎';
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+    return (bytes / 1024 / 1024).toFixed(1) + 'MB';
+  }
+
+  function renderFiles(files) {
+    const el = document.getElementById("d-files");
+    if (!files || !files.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:4px 0;">첨부 파일이 없습니다</div>`;
+      return;
+    }
+    el.innerHTML = files.map((f, i) => `
+      <div class="file-item">
+        <div class="file-icon">${getFileIcon(f.name)}</div>
+        <div class="file-info">
+          <div class="file-name">${esc(f.name)}</div>
+          <div class="file-size">${formatBytes(f.size)}</div>
+        </div>
+        <div class="file-actions">
+          <a href="${f.url}" target="_blank" class="btn sm">열기</a>
+          <button class="btn sm danger" data-idx="${i}">삭제</button>
+        </div>
+      </div>`).join("");
+    el.querySelectorAll(".btn.danger").forEach(btn => {
+      btn.addEventListener("click", () => deleteFile(Number(btn.dataset.idx)));
+    });
+  }
+
+  async function deleteFile(idx) {
+    if (!currentId || !confirm("파일을 삭제하시겠습니까?")) return;
+    const l = lectures.find(x => x.id === currentId);
+    const files = [...(l.files || [])];
+    const file = files[idx];
+    try {
+      await deleteObject(ref(storage, file.path));
+    } catch(e) { /* 이미 없는 경우 무시 */ }
+    files.splice(idx, 1);
+    await updateDoc(doc(db, "lectures", currentId), { files });
+  }
+
+  document.getElementById("fileInput").addEventListener("change", async (e) => {
+    if (!currentId) return;
+    const uploadFiles = Array.from(e.target.files);
+    if (!uploadFiles.length) return;
+
+    const progress = document.getElementById("uploadProgress");
+    const label = document.getElementById("fileUploadLabel");
+    progress.style.display = "block";
+    label.style.pointerEvents = "none";
+
+    const l = lectures.find(x => x.id === currentId);
+    const existingFiles = [...(l.files || [])];
+
+    for (let i = 0; i < uploadFiles.length; i++) {
+      const file = uploadFiles[i];
+      progress.textContent = `업로드 중... (${i + 1}/${uploadFiles.length}) ${file.name}`;
+      const path = `lectures/${currentId}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, path);
+      await new Promise((resolve, reject) => {
+        const task = uploadBytesResumable(storageRef, file);
+        task.on("state_changed", null, reject, async () => {
+          const url = await getDownloadURL(task.snapshot.ref);
+          existingFiles.push({ name: file.name, size: file.size, url, path });
+          resolve();
+        });
+      });
+    }
+
+    await updateDoc(doc(db, "lectures", currentId), { files: existingFiles });
+    progress.style.display = "none";
+    label.style.pointerEvents = "";
+    e.target.value = "";
+  });
   document.getElementById("d-editBtn").addEventListener("click", () => {
     document.getElementById("detailOverlay").classList.add("hidden");
     openForm(currentId);
