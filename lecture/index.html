@@ -148,6 +148,26 @@
     .flag.ok { background: #d1fae5; color: #065f46; }
     .flag.pending { background: #fef9c3; color: #92400e; }
 
+    /* ── SEARCH BAR ── */
+    .search-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: #fff; border: 1.5px solid var(--line); border-radius: 14px;
+      padding: 10px 16px; margin-bottom: 20px; box-shadow: var(--shadow);
+      transition: 0.2s;
+    }
+    .search-bar:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(13,148,136,.1); }
+    .search-bar input {
+      flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
+      color: var(--text); background: transparent;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+    .search-bar .search-icon { color: var(--muted); font-size: 16px; }
+    .search-bar .clear-btn {
+      border: none; background: none; cursor: pointer; color: var(--muted);
+      font-size: 16px; padding: 0; line-height: 1; display: none;
+    }
+    .search-bar .clear-btn.visible { display: block; }
+
     /* ── EMPTY STATE ── */
     .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
     .empty-icon { font-size: 52px; margin-bottom: 14px; opacity: 0.5; }
@@ -382,6 +402,11 @@
 
 <!-- CONTENT -->
 <div class="wrap">
+  <div class="search-bar" id="searchBar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="기관명, 강의 주제, 장소, 담당자 검색..." />
+    <button class="clear-btn" id="searchClear">✕</button>
+  </div>
   <div id="tab-upcoming">
     <div class="lecture-grid" id="upcoming-list"></div>
   </div>
@@ -603,6 +628,28 @@
   let currentCalYear = new Date().getFullYear();
   let currentCalMonth = new Date().getMonth();
   let unsubscribe = null;
+  let searchQuery = "";
+
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    document.getElementById("searchClear").classList.toggle("visible", searchQuery.length > 0);
+    renderList();
+  });
+  document.getElementById("searchClear").addEventListener("click", () => {
+    searchQuery = "";
+    document.getElementById("searchInput").value = "";
+    document.getElementById("searchClear").classList.remove("visible");
+    renderList();
+  });
+
+  function filterBySearch(list) {
+    if (!searchQuery) return list;
+    return list.filter(l =>
+      [l.org, l.topic, l.place, l.contact, l.memo].some(v =>
+        v && String(v).toLowerCase().includes(searchQuery)
+      )
+    );
+  }
 
   onAuthStateChanged(auth, (user) => {
     if (!user || user.email.toLowerCase() !== ALLOWED) {
@@ -657,10 +704,18 @@
 
   // ── RENDER ─────────────────────────────────────────
   function renderList() {
-    if (currentTab === "calendar") { renderCalendar(); return; }
+    const searchBar = document.getElementById("searchBar");
+    if (currentTab === "calendar") {
+      searchBar.style.display = "none";
+      renderCalendar();
+      return;
+    }
+    searchBar.style.display = "";
     if (currentTab === "upcoming") {
-      const list = lectures.filter(l => l.status === "의뢰" || l.status === "확정")
-        .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      const list = filterBySearch(
+        lectures.filter(l => l.status === "의뢰" || l.status === "확정")
+          .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+      );
       renderCards("upcoming-list", list);
     } else {
       const doneList = lectures.filter(l => l.status === "완료" || l.status === "취소");
@@ -673,7 +728,7 @@
       yearTabsEl.querySelectorAll(".year-tab").forEach(b => {
         b.addEventListener("click", () => { currentYear = Number(b.dataset.year); renderList(); });
       });
-      const list = doneList.filter(l => l.date?.startsWith(String(currentYear)));
+      const list = filterBySearch(doneList.filter(l => l.date?.startsWith(String(currentYear))));
       renderCards("done-list", list);
     }
   }
