@@ -183,25 +183,6 @@
     .qa-reply-input-row input:focus { border-color: var(--teal); background: #fff; }
 
     /* ── 자료 ── */
-    .file-upload-area {
-      border: 2px dashed var(--line); border-radius: var(--r);
-      background: #fff; padding: 32px 24px; text-align: center;
-      cursor: pointer; transition: 0.2s; margin-bottom: 20px;
-    }
-    .file-upload-area:hover, .file-upload-area.drag-over {
-      border-color: var(--teal); background: #f0fdf9;
-    }
-    .file-upload-area .upload-icon { font-size: 36px; margin-bottom: 10px; }
-    .file-upload-area p { font-size: 14px; color: var(--muted); font-weight: 600; }
-    .file-upload-area span { font-size: 12px; color: var(--muted); }
-    .upload-progress-bar {
-      width: 100%; background: var(--line); border-radius: 8px; height: 8px;
-      margin-top: 14px; overflow: hidden; display: none;
-    }
-    .upload-progress-fill {
-      height: 100%; background: linear-gradient(90deg, var(--teal), var(--accent));
-      border-radius: 8px; width: 0%; transition: width 0.3s;
-    }
     .file-list-grid { display: flex; flex-direction: column; gap: 10px; }
     .file-item {
       display: flex; align-items: center; gap: 12px;
@@ -407,16 +388,17 @@
 
   <!-- 자료 탭 -->
   <div id="tab-files" style="display:none;">
-    <div id="fileUploadWrap" style="display:none;">
-      <div class="file-upload-area" id="fileDropZone">
-        <div class="upload-icon">📁</div>
-        <p>파일을 드래그하거나 클릭해서 업로드</p>
-        <span>최대 20MB · 모든 파일 형식</span>
-        <div class="upload-progress-bar" id="uploadProgressBar">
-          <div class="upload-progress-fill" id="uploadProgressFill"></div>
+    <div id="fileUploadWrap" style="display:none;margin-bottom:20px;">
+      <div class="note-input-area" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);">📎 자료 링크 추가</div>
+        <input type="text" id="fileLinkName" placeholder="파일 이름 (예: 1강 강의자료.pdf)"
+          style="border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;" />
+        <div style="display:flex;gap:8px;">
+          <input type="url" id="fileLinkUrl" placeholder="구글 드라이브 공유 링크 붙여넣기"
+            style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;" />
+          <button class="btn primary" id="fileLinkAddBtn">추가</button>
         </div>
       </div>
-      <input type="file" id="fileInput" style="display:none;" />
     </div>
     <div class="file-list-grid" id="fileList">
       <div class="file-empty">📂 업로드된 자료가 없습니다.</div>
@@ -431,9 +413,6 @@
     getFirestore, doc, onSnapshot, setDoc, updateDoc, collection,
     addDoc, query, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-  import {
-    getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject
-  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAd08tVXgWZ2_dg3jzvhawmH4jtolRmfhY",
@@ -446,7 +425,6 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const storage = getStorage(app);
 
   const LECTURE_ID = "default";
   const PW = "sblab2026";
@@ -807,19 +785,13 @@
     );
   }
 
-  // ── 파일 자료 ──
+  // ── 파일 자료 (구글 드라이브 링크 방식) ──
   function fileIcon(name) {
     const ext = (name.split(".").pop() || "").toLowerCase();
     const map = { pdf:"📄", pptx:"📊", ppt:"📊", xlsx:"📈", xls:"📈", docx:"📝", doc:"📝",
-                  zip:"🗜", png:"🖼", jpg:"🖼", jpeg:"🖼", gif:"🖼", mp4:"🎬", mov:"🎬",
-                  mp3:"🎵", m4a:"🎵", hwp:"📋", key:"📊" };
+                  hwp:"📋", zip:"🗜", png:"🖼", jpg:"🖼", jpeg:"🖼", gif:"🖼",
+                  mp4:"🎬", mov:"🎬", mp3:"🎵", key:"📊" };
     return map[ext] || "📁";
-  }
-  function formatSize(bytes) {
-    if (!bytes) return "";
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / 1024 / 1024).toFixed(1) + " MB";
   }
 
   let latestFileSnap = null;
@@ -829,24 +801,24 @@
   function renderFileList(snap) {
     const list = document.getElementById("fileList");
     if (!snap || snap.empty) {
-      list.innerHTML = '<div class="file-empty">📂 업로드된 자료가 없습니다.</div>';
+      list.innerHTML = '<div class="file-empty">📂 공유된 자료가 없습니다.</div>';
       return;
     }
     list.innerHTML = snap.docs.map(d => {
       const f = d.data();
       const delBtn = isEditor
-        ? `<button class="btn sm file-del-btn" data-id="${d.id}" data-path="${esc(f.storagePath)}"
+        ? `<button class="btn sm file-del-btn" data-id="${d.id}"
              style="background:#fee2e2;color:#991b1b;border:none;flex-shrink:0;">삭제</button>`
         : "";
       return `<div class="file-item">
         <div class="f-icon">${fileIcon(f.name)}</div>
         <div class="f-info">
           <div class="f-name">${esc(f.name)}</div>
-          <div class="f-meta">${formatSize(f.size)}${f.size ? " · " : ""}${f.uploadedAt || ""}</div>
+          <div class="f-meta">${f.addedAt || ""}</div>
         </div>
         <div class="f-actions">
-          <a href="${f.url}" target="_blank" rel="noopener noreferrer" download>
-            <button class="btn primary sm">⬇ 다운로드</button>
+          <a href="${f.url}" target="_blank" rel="noopener noreferrer">
+            <button class="btn primary sm">🔗 열기</button>
           </a>
           ${delBtn}
         </div>
@@ -859,66 +831,36 @@
     renderFileList(snap);
   });
 
-  // 파일 삭제 (강사 모드)
+  // 링크 추가 (강사 모드)
+  document.getElementById("fileLinkAddBtn").addEventListener("click", async () => {
+    if (!isEditor) return;
+    const name = document.getElementById("fileLinkName").value.trim();
+    const url = document.getElementById("fileLinkUrl").value.trim();
+    if (!name || !url) { alert("파일 이름과 링크를 모두 입력하세요."); return; }
+    const btn = document.getElementById("fileLinkAddBtn");
+    btn.disabled = true;
+    btn.textContent = "추가 중...";
+    const now = new Date().toLocaleString("ko-KR", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+    try {
+      await addDoc(filesRef, { name, url, addedAt: now, createdAt: serverTimestamp() });
+      document.getElementById("fileLinkName").value = "";
+      document.getElementById("fileLinkUrl").value = "";
+      btn.textContent = "추가됨 ✓";
+      setTimeout(() => btn.textContent = "추가", 1500);
+    } catch(e) {
+      alert("추가 실패: " + e.message);
+      btn.textContent = "추가";
+    }
+    btn.disabled = false;
+  });
+
+  // 링크 삭제 (강사 모드)
   document.getElementById("fileList").addEventListener("click", async e => {
     const btn = e.target.closest(".file-del-btn");
     if (!btn || !isEditor) return;
-    if (!confirm("이 파일을 삭제하시겠습니까?")) return;
+    if (!confirm("이 자료를 삭제하시겠습니까?")) return;
     const { deleteDoc: delDoc } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
-    try {
-      const sRef = storageRef(storage, btn.dataset.path);
-      await deleteObject(sRef);
-    } catch(e) { /* 스토리지 파일 없어도 Firestore 레코드는 삭제 */ }
     await delDoc(doc(db, "live_files", LECTURE_ID, "items", btn.dataset.id));
-  });
-
-  // 파일 업로드
-  function uploadFile(file) {
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) { alert("20MB 이하 파일만 업로드 가능합니다."); return; }
-    const bar = document.getElementById("uploadProgressBar");
-    const fill = document.getElementById("uploadProgressFill");
-    bar.style.display = "";
-    fill.style.width = "0%";
-    const timestamp = Date.now();
-    const path = `live_files/${LECTURE_ID}/${timestamp}_${file.name}`;
-    const sRef = storageRef(storage, path);
-    const task = uploadBytesResumable(sRef, file);
-    task.on("state_changed",
-      snap => {
-        const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
-        fill.style.width = pct + "%";
-      },
-      err => { alert("업로드 실패: " + err.message); bar.style.display = "none"; },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        const now = new Date().toLocaleString("ko-KR", { year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
-        await addDoc(filesRef, {
-          name: file.name,
-          size: file.size,
-          url,
-          storagePath: path,
-          uploadedAt: now,
-          createdAt: serverTimestamp()
-        });
-        bar.style.display = "none";
-        fill.style.width = "0%";
-        document.getElementById("fileInput").value = "";
-      }
-    );
-  }
-
-  const dropZone = document.getElementById("fileDropZone");
-  const fileInput = document.getElementById("fileInput");
-
-  dropZone.addEventListener("click", () => fileInput.click());
-  fileInput.addEventListener("change", e => uploadFile(e.target.files[0]));
-  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
-  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
-  dropZone.addEventListener("drop", e => {
-    e.preventDefault();
-    dropZone.classList.remove("drag-over");
-    uploadFile(e.dataTransfer.files[0]);
   });
 </script>
 </body>
