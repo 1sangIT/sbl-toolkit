@@ -134,6 +134,12 @@
       cursor: pointer; font-family: inherit;
     }
     .note-block-del:hover { background: #fecaca; }
+    .note-block-copy {
+      background: #f1f5f9; color: #475569; border: none;
+      padding: 3px 9px; border-radius: 7px; font-size: 11px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .note-block-copy:hover { background: #e2e8f0; }
     .note-block-content { font-size: 15px; line-height: 1.8; white-space: pre-wrap; color: var(--text); }
     .note-empty {
       text-align: center; padding: 48px 0; color: var(--muted);
@@ -468,7 +474,10 @@
             ${periodBadge}
             <span class="note-block-time">${time}</span>
           </div>
-          ${delBtn}
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="note-block-copy">📋</button>
+            ${delBtn}
+          </div>
         </div>
         <div class="note-block-content">${linkify(b.content)}</div>
       </div>`;
@@ -561,6 +570,17 @@
       btn.textContent = "저장 · 추가";
     }
     btn.disabled = false;
+  });
+
+  // 블록 복사
+  document.getElementById("noteBlockList").addEventListener("click", e => {
+    const copyBtn = e.target.closest(".note-block-copy");
+    if (!copyBtn) return;
+    const content = copyBtn.closest(".note-block").querySelector(".note-block-content").innerText;
+    navigator.clipboard.writeText(content).then(() => {
+      copyBtn.textContent = "✓";
+      setTimeout(() => { copyBtn.textContent = "📋"; }, 1500);
+    });
   });
 
   // 블록 삭제 (편집자만)
