@@ -287,6 +287,19 @@
         </div>
     </div>
 
+    <!-- 새 인사이트 생성 모달 -->
+    <div class="modal-overlay" id="createInsightModal">
+        <div class="modal">
+            <h3>💡 새 인사이트 만들기</h3>
+            <label>주제 키워드</label>
+            <input type="text" id="newInsightTitle" placeholder="예: Claude, AI 글래스, 스마트홈..." autofocus>
+            <div class="modal-btn-row">
+                <button class="btn-cancel" onclick="closeCreateInsightModal()">취소</button>
+                <button class="btn-primary" onclick="confirmCreateInsight()">만들기</button>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="importFileInput" accept=".json" style="display:none;">
 
     <script type="module">
@@ -825,17 +838,38 @@
                 }`;
         }
 
-        window.createInsight = async () => {
-            const title = prompt('인사이트 제목 (주제 키워드)\n예: Claude, AI 글래스, 스마트홈...');
-            if (!title?.trim()) return;
+        window.createInsight = () => {
+            document.getElementById('newInsightTitle').value = '';
+            document.getElementById('createInsightModal').classList.add('open');
+            setTimeout(() => document.getElementById('newInsightTitle').focus(), 100);
+        };
+
+        window.closeCreateInsightModal = () => {
+            document.getElementById('createInsightModal').classList.remove('open');
+        };
+
+        document.getElementById('createInsightModal').addEventListener('click', e => {
+            if (e.target === document.getElementById('createInsightModal')) closeCreateInsightModal();
+        });
+
+        document.getElementById('createInsightModal').addEventListener('keydown', e => {
+            if (e.key === 'Enter') confirmCreateInsight();
+            if (e.key === 'Escape') closeCreateInsightModal();
+        });
+
+        window.confirmCreateInsight = async () => {
+            const title = document.getElementById('newInsightTitle').value.trim();
+            if (!title) return;
+            closeCreateInsightModal();
             const newRef = await push(ref(db, `users/${currentUserId}/insights`), {
-                title: title.trim(),
+                title,
                 body: '',
                 linkedNews: {},
                 createdAt: Date.now(),
                 updatedAt: Date.now()
             });
             currentInsightId = newRef.key;
+            renderInsightDetail(currentInsightId);
         };
 
         window.openInsight = (id) => { currentInsightId = id; renderInsightDetail(id); };
