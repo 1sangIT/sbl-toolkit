@@ -857,31 +857,25 @@
             if (e.key === 'Escape') closeCreateInsightModal();
         });
 
-        window.confirmCreateInsight = async () => {
+        window.confirmCreateInsight = () => {
             const title = document.getElementById('newInsightTitle').value.trim();
             if (!title) return;
             closeCreateInsightModal();
-            // push()의 key는 await 전에 동기적으로 사용 가능 (클라이언트 측 생성)
-            // currentInsightId를 먼저 세팅해야 onValue 콜백이 renderInsightDetail을 호출함
+            const now = Date.now();
             const pendingRef = push(ref(db, `users/${currentUserId}/insights`), {
-                title,
-                body: '',
-                linkedNews: {},
-                createdAt: Date.now(),
-                updatedAt: Date.now()
+                title, body: '', linkedNews: {}, createdAt: now, updatedAt: now
             });
-            currentInsightId = pendingRef.key;
-            await pendingRef;
-            // onValue 콜백이 이미 renderInsightDetail을 호출했을 수 있으나, 미호출 시 여기서 보장
-            if (currentInsightId) renderInsightDetail(currentInsightId);
+            // Firebase 콜백 타이밍 무관하게 즉시 로컬에 추가 후 목록 렌더
+            allInsightsData.unshift({ id: pendingRef.key, title, body: '', linkedNews: {}, createdAt: now, updatedAt: now });
+            currentInsightId = null;
+            renderInsightList();
         };
 
         window.openInsight = (id) => { currentInsightId = id; renderInsightDetail(id); };
 
         function renderInsightDetail(id) {
             const ins = allInsightsData.find(x => x.id === id);
-            // 데이터 아직 없으면 currentInsightId는 유지 (Firebase listener가 올 때 재시도)
-            if (!ins) { renderInsightList(); return; }
+            if (!ins) { currentInsightId = null; renderInsightList(); return; }
             const linkedIds = Object.keys(ins.linkedNews || {});
             const linkedArticles = linkedIds.map(nid => allNewsData.find(n => n.id === nid)).filter(Boolean);
             const v = document.getElementById('insightsView');
