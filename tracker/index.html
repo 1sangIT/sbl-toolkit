@@ -779,7 +779,19 @@
         window.switchTab = (view) => {
             document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
             document.querySelectorAll(".view-container").forEach(c => c.classList.toggle("active", c.id === `${view}View`));
-            updateViews();
+            // 인사이트 목록 탭 전환 시 항상 Firebase에서 전체 데이터를 직접 읽어 stale 상태 방지
+            if (view === 'insights' && !currentInsightId && currentUserId) {
+                get(ref(db, `users/${currentUserId}/insights`))
+                    .then(snap => {
+                        allInsightsData = [];
+                        snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
+                        allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                        renderInsightList();
+                    })
+                    .catch(() => updateViews());
+            } else {
+                updateViews();
+            }
         };
         function updateViews() {
             const active = document.querySelector(".tab.active")?.dataset.view;
@@ -814,22 +826,28 @@
             else renderInsightList();
         }
 
+        function escHtml(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
         function renderInsightList() {
             const v = document.getElementById('insightsView');
             if (!v) return;
+            const countLabel = allInsightsData.length > 0 ? ` (${allInsightsData.length})` : '';
             v.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                    <h3 style="margin:0; font-weight:900;">💡 인사이트 노트</h3>
+                    <h3 style="margin:0; font-weight:900;">💡 인사이트 노트${countLabel}</h3>
                     <button onclick="createInsight()" style="background:var(--primary); color:white; border:none; padding:0.6rem 1.2rem; border-radius:8px; font-weight:800; cursor:pointer;">+ 새 인사이트</button>
                 </div>
                 ${allInsightsData.length === 0
                     ? '<div style="text-align:center;padding:4rem;color:var(--text-light);">인사이트가 없습니다.<br><br>주제별 키워드로 생각을 정리하고<br>수집한 기사를 연결해보세요.</div>'
                     : `<div class="insight-list-grid">${allInsightsData.map(ins => {
                         const count = Object.keys(ins.linkedNews || {}).length;
-                        const preview = ins.body ? ins.body.substring(0, 80) + (ins.body.length > 80 ? '...' : '') : '<em style="opacity:0.5">메모 없음</em>';
+                        const rawPreview = ins.body ? ins.body.substring(0, 80) + (ins.body.length > 80 ? '...' : '') : '';
+                        const preview = rawPreview ? escHtml(rawPreview) : '<em style="opacity:0.5">메모 없음</em>';
                         const date = ins.updatedAt ? new Date(ins.updatedAt).toLocaleDateString('ko-KR') : '';
                         return `<div class="insight-card" onclick="openInsight('${ins.id}')">
-                            <div class="insight-card-title">${ins.title || '제목 없음'}</div>
+                            <div class="insight-card-title">${escHtml(ins.title || '제목 없음')}</div>
                             <div class="insight-card-body">${preview}</div>
                             <div class="insight-card-meta">
                                 <span>📰 기사 ${count}개</span>
