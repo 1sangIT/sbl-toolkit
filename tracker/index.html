@@ -304,7 +304,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-        import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
+        import { getDatabase, ref, push, onValue, remove, update, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -859,18 +859,26 @@
             if (e.key === 'Escape') closeCreateInsightModal();
         });
 
-        window.confirmCreateInsight = () => {
+        window.confirmCreateInsight = async () => {
             const title = document.getElementById('newInsightTitle').value.trim();
             if (!title) return;
             closeCreateInsightModal();
             const now = Date.now();
-            const pendingRef = push(ref(db, `users/${currentUserId}/insights`), {
-                title, body: '', linkedNews: {}, createdAt: now, updatedAt: now
-            });
-            // Firebase 콜백 타이밍 무관하게 즉시 로컬에 추가 후 목록 렌더
-            allInsightsData.unshift({ id: pendingRef.key, title, body: '', linkedNews: {}, createdAt: now, updatedAt: now });
-            currentInsightId = null;
-            renderInsightList();
+            try {
+                const pendingRef = push(ref(db, `users/${currentUserId}/insights`), {
+                    title, body: '', linkedNews: {}, createdAt: now, updatedAt: now
+                });
+                // Firebase 콜백 전에도 새 카드를 바로 보여준다.
+                allInsightsData.unshift({ id: pendingRef.key, title, body: '', linkedNews: {}, createdAt: now, updatedAt: now });
+                currentInsightId = null;
+                renderInsightList();
+                await pendingRef;
+            } catch (err) {
+                allInsightsData = allInsightsData.filter(ins => ins.title !== title || ins.createdAt !== now);
+                renderInsightList();
+                alert('인사이트 생성에 실패했습니다. 다시 시도해주세요.');
+                console.error('create insight failed:', err);
+            }
         };
 
         window.openInsight = (id) => { currentInsightId = id; renderInsightDetail(id); };
@@ -969,16 +977,30 @@
             const title = titleEl.value.trim();
             const body = bodyEl.value;  // trim 제거 - 줄바꿈 포함 원본 유지
             const now = Date.now();
-            await update(ref(db, `users/${currentUserId}/insights/${id}`), { title, body, updatedAt: now });
-            // onValue 타이밍 무관하게 로컬 데이터 직접 갱신
-            const idx = allInsightsData.findIndex(x => x.id === id);
-            if (idx >= 0) allInsightsData[idx] = { ...allInsightsData[idx], title, body, updatedAt: now };
             const btn = document.getElementById('insightSaveBtn');
-            if (!btn) return;
-            const orig = btn.textContent;
-            btn.textContent = '✅ 저장됨';
-            btn.style.background = 'var(--success)';
-            setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+            const orig = btn?.textContent || '💾 저장';
+            try {
+                if (btn) { btn.disabled = true; btn.textContent = '저장 중…'; }
+                const insightRef = ref(db, `users/${currentUserId}/insights/${id}`);
+                await update(insightRef, { title, body, updatedAt: now });
+
+                // 저장 완료 신호만 믿지 않고 DB의 최종 값을 다시 읽는다.
+                // 이 값으로 목록 카드도 갱신해 빈 메모로 되돌아가는 레이스를 막는다.
+                const saved = (await get(insightRef)).val();
+                if (!saved || saved.body !== body) throw new Error('저장된 메모를 확인하지 못했습니다.');
+                const idx = allInsightsData.findIndex(x => x.id === id);
+                if (idx >= 0) allInsightsData[idx] = { id, ...saved };
+
+                if (btn) {
+                    btn.textContent = '✅ 저장됨';
+                    btn.style.background = 'var(--success)';
+                    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.disabled = false; }, 1800);
+                }
+            } catch (err) {
+                if (btn) { btn.textContent = '⚠️ 저장 실패'; btn.style.background = 'var(--danger)'; btn.disabled = false; }
+                alert('메모 저장에 실패했습니다. 네트워크를 확인한 뒤 다시 시도해주세요.');
+                console.error('save insight failed:', err);
+            }
         };
 
         window.deleteInsight = async (id) => {
@@ -987,7 +1009,11 @@
             currentInsightId = null;
         };
 
-        window.backToInsightList = () => { currentInsightId = null; renderInsightList(); };
+        window.backToInsightList = () => {
+            currentInsightId = null;
+            // 현재 메모의 저장 완료 여부와 상관없이 목록은 최신 로컬 데이터로 즉시 렌더한다.
+            renderInsightList();
+        };
 
         window.openLinkToInsightModal = (newsId) => {
             document.getElementById('linkNewsId').value = newsId;
