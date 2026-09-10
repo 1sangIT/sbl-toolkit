@@ -1009,9 +1009,15 @@
             currentInsightId = null;
         };
 
-        window.backToInsightList = () => {
+        window.backToInsightList = async () => {
             currentInsightId = null;
-            // 현재 메모의 저장 완료 여부와 상관없이 목록은 최신 로컬 데이터로 즉시 렌더한다.
+            // onValue 타이밍 의존 제거: Firebase에서 직접 최신값을 읽어 렌더
+            try {
+                const snap = await get(ref(db, `users/${currentUserId}/insights`));
+                allInsightsData = [];
+                snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
+                allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            } catch (e) { /* 실패 시 기존 allInsightsData 유지 */ }
             renderInsightList();
         };
 
