@@ -963,9 +963,16 @@
         };
 
         window.saveInsight = async (id) => {
-            const title = document.getElementById('insightTitle')?.value.trim();
-            const body = document.getElementById('insightBody')?.value.trim();
-            await update(ref(db, `users/${currentUserId}/insights/${id}`), { title, body, updatedAt: Date.now() });
+            const titleEl = document.getElementById('insightTitle');
+            const bodyEl = document.getElementById('insightBody');
+            if (!titleEl || !bodyEl) return;
+            const title = titleEl.value.trim();
+            const body = bodyEl.value;  // trim 제거 - 줄바꿈 포함 원본 유지
+            const now = Date.now();
+            await update(ref(db, `users/${currentUserId}/insights/${id}`), { title, body, updatedAt: now });
+            // onValue 타이밍 무관하게 로컬 데이터 직접 갱신
+            const idx = allInsightsData.findIndex(x => x.id === id);
+            if (idx >= 0) allInsightsData[idx] = { ...allInsightsData[idx], title, body, updatedAt: now };
             const btn = document.getElementById('insightSaveBtn');
             if (!btn) return;
             const orig = btn.textContent;
