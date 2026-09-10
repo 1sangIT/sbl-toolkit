@@ -803,7 +803,9 @@
                 allInsightsData = [];
                 snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
                 allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-                if (document.querySelector('.tab.active')?.dataset.view === 'insights') renderInsightView();
+                // 상세 편집 중엔 재렌더 금지 — onValue가 textarea를 교체해 내용을 날리는 버그 방지
+                if (currentInsightId) return;
+                if (document.querySelector('.tab.active')?.dataset.view === 'insights') renderInsightList();
             });
         }
 
