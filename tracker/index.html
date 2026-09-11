@@ -779,15 +779,10 @@
         window.switchTab = (view) => {
             document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === view));
             document.querySelectorAll(".view-container").forEach(c => c.classList.toggle("active", c.id === `${view}View`));
-            // 인사이트 목록 탭 전환 시 항상 Firebase에서 전체 데이터를 직접 읽어 stale 상태 방지
+            // 인사이트 목록 탭 전환 시 서버 REST 응답으로 전체 목록을 다시 구성한다.
             if (view === 'insights' && !currentInsightId && currentUserId) {
-                get(ref(db, `users/${currentUserId}/insights`))
-                    .then(snap => {
-                        allInsightsData = [];
-                        snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
-                        allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-                        renderInsightList();
-                    })
+                refreshInsightsFromServer()
+                    .then(renderInsightList)
                     .catch(() => updateViews());
             } else {
                 updateViews();
@@ -810,15 +805,30 @@
         let allInsightsData = [];
         let currentInsightId = null;
 
+        function sortInsights(items) {
+            return items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        }
+
+        // 인사이트 목록은 Realtime Database SDK의 로컬 캐시/구독값을 쓰지 않는다.
+        // 항상 현재 로그인 토큰으로 REST 원본을 읽어, 한 건만 보이는 캐시 문제를 차단한다.
+        async function refreshInsightsFromServer() {
+            const user = auth.currentUser;
+            if (!user || !currentUserId) throw new Error('로그인 정보를 찾을 수 없습니다.');
+            const token = await user.getIdToken();
+            const url = `${firebaseConfig.databaseURL}/users/${encodeURIComponent(currentUserId)}/insights.json?auth=${encodeURIComponent(token)}`;
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`인사이트 목록을 불러오지 못했습니다 (${response.status}).`);
+            const raw = await response.json() || {};
+            allInsightsData = sortInsights(Object.entries(raw).map(([id, value]) => ({ id, ...(value || {}) })));
+            return allInsightsData;
+        }
+
         function loadInsightsData() {
-            onValue(ref(db, `users/${currentUserId}/insights`), snap => {
-                allInsightsData = [];
-                snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
-                allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-                // 상세 편집 중엔 재렌더 금지 — onValue가 textarea를 교체해 내용을 날리는 버그 방지
-                if (currentInsightId) return;
-                if (document.querySelector('.tab.active')?.dataset.view === 'insights') renderInsightList();
-            });
+            refreshInsightsFromServer()
+                .then(() => {
+                    if (!currentInsightId && document.querySelector('.tab.active')?.dataset.view === 'insights') renderInsightList();
+                })
+                .catch(err => console.error('load insights failed:', err));
         }
 
         function renderInsightView() {
@@ -891,6 +901,8 @@
                 currentInsightId = null;
                 renderInsightList();
                 await pendingRef;
+                await refreshInsightsFromServer();
+                if (document.querySelector('.tab.active')?.dataset.view === 'insights') renderInsightList();
             } catch (err) {
                 allInsightsData = allInsightsData.filter(ins => ins.title !== title || ins.createdAt !== now);
                 renderInsightList();
@@ -1006,8 +1018,7 @@
                 // 이 값으로 목록 카드도 갱신해 빈 메모로 되돌아가는 레이스를 막는다.
                 const saved = (await get(insightRef)).val();
                 if (!saved || saved.body !== body) throw new Error('저장된 메모를 확인하지 못했습니다.');
-                const idx = allInsightsData.findIndex(x => x.id === id);
-                if (idx >= 0) allInsightsData[idx] = { id, ...saved };
+                await refreshInsightsFromServer();
 
                 if (btn) {
                     btn.textContent = '✅ 저장됨';
@@ -1029,12 +1040,9 @@
 
         window.backToInsightList = async () => {
             currentInsightId = null;
-            // onValue 타이밍 의존 제거: Firebase에서 직접 최신값을 읽어 렌더
+            // SDK 캐시가 아닌 서버 원본으로 목록을 다시 렌더한다.
             try {
-                const snap = await get(ref(db, `users/${currentUserId}/insights`));
-                allInsightsData = [];
-                snap.forEach(child => allInsightsData.push({ id: child.key, ...child.val() }));
-                allInsightsData.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                await refreshInsightsFromServer();
             } catch (e) { /* 실패 시 기존 allInsightsData 유지 */ }
             renderInsightList();
         };
