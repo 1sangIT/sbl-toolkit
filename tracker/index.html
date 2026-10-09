@@ -984,22 +984,36 @@
                 </div>`).join('');
         };
 
-        window.linkArticle = async (insightId, newsId) => {
+                window.linkArticle = async (insightId, newsId) => {
             const updates = {};
             updates[`linkedNews/${newsId}`] = true;
-            updates['updatedAt'] = Date.now();
+            const now = Date.now();
+            updates['updatedAt'] = now;
             await update(ref(db, `users/${currentUserId}/insights/${insightId}`), updates);
+
+            const insight = allInsightsData.find(x => x.id === insightId);
+            if (insight) {
+                insight.linkedNews = { ...(insight.linkedNews || {}), [newsId]: true };
+                insight.updatedAt = now;
+            }
             const inp = document.getElementById('insightArticleSearch');
             if (inp) inp.value = '';
             const res = document.getElementById('insightSearchResults');
             if (res) res.style.display = 'none';
+            if (currentInsightId === insightId) renderInsightDetail(insightId);
         };
 
         window.unlinkArticle = async (insightId, newsId) => {
+            const now = Date.now();
             await remove(ref(db, `users/${currentUserId}/insights/${insightId}/linkedNews/${newsId}`));
-            await update(ref(db, `users/${currentUserId}/insights/${insightId}`), { updatedAt: Date.now() });
+            await update(ref(db, `users/${currentUserId}/insights/${insightId}`), { updatedAt: now });
+            const insight = allInsightsData.find(x => x.id === insightId);
+            if (insight?.linkedNews) {
+                delete insight.linkedNews[newsId];
+                insight.updatedAt = now;
+            }
+            if (currentInsightId === insightId) renderInsightDetail(insightId);
         };
-
         window.saveInsight = async (id) => {
             const titleEl = document.getElementById('insightTitle');
             const bodyEl = document.getElementById('insightBody');
