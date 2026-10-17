@@ -1,0 +1,19 @@
+{
+  "name": "뉴스 수집함",
+  "short_name": "뉴스 수집함",
+  "description": "태블릿에서 읽은 뉴스를 바로 저장하는 개인 수집함",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "./share-target/",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}
