@@ -346,6 +346,7 @@
         let tagChart, trendChart;
         const captureParams = new URLSearchParams(location.search);
         const pendingCaptureUrl = captureParams.get('capture') || '';
+        const pendingCaptureTitle = captureParams.get('title') || '';
         const pendingCaptureSource = captureParams.get('source') || '모바일 공유';
         let pendingCaptureHandled = false;
 
@@ -357,6 +358,8 @@
         }
 
         function captureTitle(url) {
+            const sharedTitle = String(pendingCaptureTitle || '').trim();
+            if (sharedTitle) return sharedTitle.slice(0, 200);
             try { return `${new URL(url).hostname.replace(/^www\./, '')}에서 저장한 뉴스`; }
             catch (_) { return '모바일에서 저장한 뉴스'; }
         }
