@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="theme-color" content="#3b82f6"/>
+    <link rel="manifest" href="./manifest.webmanifest"/>
+    <link rel="apple-touch-icon" href="./icon.svg"/>
     <title>IT 뉴스 인사이트 트래커v5</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -47,6 +50,8 @@
         .cluster-title { font-size: 1.2rem; font-weight: 900; color: var(--primary); margin-bottom: 1rem; }
         .view-container { display: none; }
         .view-container.active { display: block; }
+        .capture-banner { display:none; margin:0 0 1rem; padding:0.9rem 1rem; border-radius:10px; background:#eff6ff; color:#1e3a8a; border:1px solid #bfdbfe; font-weight:750; }
+        .inbox-source { font-size:0.75rem; color:var(--text-light); font-weight:700; margin-top:0.25rem; }
 
         /* 태그 자동완성 드롭다운 */
         .tag-autocomplete {
@@ -119,6 +124,7 @@
     </div>
 
     <div id="appContainer" style="display:none;">
+        <div id="captureBanner" class="capture-banner"></div>
         <div class="user-profile">
             <img id="userAvatar" src="" class="user-avatar">
             <div class="user-info">
@@ -129,6 +135,7 @@
         </div>
 
         <div class="tabs">
+            <button class="tab" data-view="inbox">📥 수집함 <span id="inboxCount"></span></button>
             <button class="tab active" data-view="add">✏️ 새 뉴스 추가</button>
             <button class="tab" data-view="analysis">📈 분석</button>
             <button class="tab" data-view="tags">🏷️ 태그</button>
@@ -136,6 +143,14 @@
             <button class="tab" data-view="clusters">🔗 연관 뉴스</button>
             <button class="tab" data-view="timeline">⏱️ 타임라인</button>
             <button class="tab" data-view="insights">💡 인사이트</button>
+        </div>
+
+        <div id="inboxView" class="view-container">
+            <div style="background:white; padding:1.25rem; border-radius:10px; border:1px solid var(--border); margin-bottom:1rem;">
+                <h3 style="margin:0 0 0.4rem; font-weight:900;">📥 모바일 뉴스 수집함</h3>
+                <div style="color:var(--text-light); font-size:0.9rem;">태블릿에서 저장한 기사입니다. 주말에 태그·메모를 보완한 뒤 ‘정리 완료’를 누르세요.</div>
+            </div>
+            <div id="inboxList"></div>
         </div>
 
         <div id="addView" class="view-container active">
@@ -329,6 +344,63 @@
         const currentTags = [];
         let editTags = [];
         let tagChart, trendChart;
+        const captureParams = new URLSearchParams(location.search);
+        const pendingCaptureUrl = captureParams.get('capture') || '';
+        const pendingCaptureSource = captureParams.get('source') || '모바일 공유';
+        let pendingCaptureHandled = false;
+
+        function normaliseCaptureUrl(value) {
+            try {
+                const url = new URL(value);
+                return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+            } catch (_) { return ''; }
+        }
+
+        function captureTitle(url) {
+            try { return `${new URL(url).hostname.replace(/^www\./, '')}에서 저장한 뉴스`; }
+            catch (_) { return '모바일에서 저장한 뉴스'; }
+        }
+
+        function showCaptureBanner(message, success = true) {
+            const banner = document.getElementById('captureBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+            banner.style.background = success ? '#ecfdf5' : '#fef2f2';
+            banner.style.color = success ? '#065f46' : '#991b1b';
+            banner.style.borderColor = success ? '#a7f3d0' : '#fecaca';
+        }
+
+        async function savePendingCapture() {
+            const url = normaliseCaptureUrl(pendingCaptureUrl);
+            if (!url || !currentUserId || pendingCaptureHandled) return;
+            pendingCaptureHandled = true;
+            const bareUrl = url.replace(/\/$/, '');
+            try {
+                const snapshot = await get(ref(db, `users/${currentUserId}/news`));
+                let duplicate = false;
+                snapshot.forEach(child => {
+                    const existing = String(child.val()?.url || '').replace(/\/$/, '');
+                    if (existing === bareUrl) duplicate = true;
+                });
+                if (duplicate) {
+                    showCaptureBanner('이미 저장된 뉴스입니다. 수집함에서 확인해 주세요.');
+                } else {
+                    await push(ref(db, `users/${currentUserId}/news`), {
+                        title: captureTitle(url), url,
+                        date: new Date().toISOString().slice(0, 10),
+                        tags: [], note: '', timestamp: Date.now(),
+                        captureStatus: 'inbox', capturedAt: Date.now(),
+                        captureSource: pendingCaptureSource.slice(0, 40)
+                    });
+                    showCaptureBanner('✅ 뉴스 수집함에 저장했습니다. 주말에 PC에서 태그와 생각을 보완하세요.');
+                }
+                history.replaceState({}, document.title, location.pathname);
+                switchTab('inbox');
+            } catch (err) {
+                pendingCaptureHandled = false;
+                showCaptureBanner('수집 저장에 실패했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.', false);
+            }
+        }
 
         // ── 전체 태그 목록 (자동완성용) ──
         function getAllTags() {
@@ -350,6 +422,7 @@
                 // 데이터 불러오기 (데이터 누락 버그 해결 완료)
                 loadNewsData();
                 loadInsightsData();
+                savePendingCapture();
 
                 // ── 익스텐션에 로그인 토큰 전달 ──
                 try {
@@ -663,6 +736,40 @@
             select.innerHTML = '<option value="">태그: 전체</option>' + Array.from(tags).sort().map(t => `<option value="${t}" ${t===current?'selected':''}>${t}</option>`).join('');
         }
 
+        // ── 모바일 수집함 ──
+        function renderInbox() {
+            const container = document.getElementById('inboxList');
+            const inbox = allNewsData.filter(n => n.captureStatus === 'inbox');
+            const badge = document.getElementById('inboxCount');
+            if (badge) badge.textContent = inbox.length ? `(${inbox.length})` : '';
+            if (!container) return;
+            if (!inbox.length) {
+                container.innerHTML = '<div style="text-align:center; padding:3rem; background:white; border:1px solid var(--border); border-radius:10px; color:var(--text-light);">수집함이 비어 있습니다. 태블릿에서 공유 → 뉴스 수집함으로 보내 보세요.</div>';
+                return;
+            }
+            container.innerHTML = inbox.map(n => `
+                <div class="news-item">
+                    <div style="display:flex; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:220px;">
+                            <div style="font-size:0.8rem; color:var(--text-light); font-weight:700;">${n.date}</div>
+                            <div style="font-weight:900; font-size:1.05rem; margin:5px 0;">${n.title}</div>
+                            <a href="${n.url}" target="_blank" rel="noopener" style="color:var(--primary); font-size:0.9rem; word-break:break-all;">원문 열기</a>
+                            <div class="inbox-source">${n.captureSource || '모바일 공유'} · 태그와 메모를 아직 정리하지 않음</div>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-content:flex-start;">
+                            <button onclick="openEditModal('${n.id}')" style="color:var(--primary); border:1px solid var(--primary); background:white; padding:0.5rem 0.75rem; border-radius:6px; font-weight:800; cursor:pointer;">✏️ 태그·메모</button>
+                            <button onclick="markInboxReviewed('${n.id}')" style="color:var(--success); border:1px solid var(--success); background:white; padding:0.5rem 0.75rem; border-radius:6px; font-weight:800; cursor:pointer;">✅ 정리 완료</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        window.markInboxReviewed = async (id) => {
+            try {
+                await update(ref(db, `users/${currentUserId}/news/${id}`), { captureStatus: 'saved', reviewedAt: Date.now() });
+            } catch (err) { alert('❌ 상태 변경 실패: ' + err.message); }
+        };
+
         // ── 타임라인 ──
         function updateTimelineTagFilter() {
             const tags = new Set(); allNewsData.forEach(n => (n.tags||[]).forEach(t => tags.add(t)));
@@ -797,6 +904,12 @@
             if (active === 'tags')     renderTagsView();
             if (active === 'clusters') renderClusters();
             if (active === 'insights') renderInsightView();
+            if (active === 'inbox')    renderInbox();
+            const badge = document.getElementById('inboxCount');
+            if (badge) {
+                const count = allNewsData.filter(n => n.captureStatus === 'inbox').length;
+                badge.textContent = count ? `(${count})` : '';
+            }
         }
 
         // ════════════════════════════════
@@ -991,6 +1104,9 @@
             updates['updatedAt'] = now;
             await update(ref(db, `users/${currentUserId}/insights/${insightId}`), updates);
 
+            // Firebase 저장 뒤 현재 화면의 원본도 즉시 갱신한다.
+            // 구독 콜백을 기다리면, 화면을 나갔다가 다시 열기 전까지
+            // 연결 기사가 보이지 않는 문제가 생긴다.
             const insight = allInsightsData.find(x => x.id === insightId);
             if (insight) {
                 insight.linkedNews = { ...(insight.linkedNews || {}), [newsId]: true };
@@ -1118,6 +1234,9 @@
         document.getElementById('timelineStartDate').addEventListener('change', renderTimeline);
         document.getElementById('timelineEndDate').addEventListener('change', renderTimeline);
         document.getElementById("dateInput").valueAsDate = new Date();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
 
         renderInputTags();
     </script>
