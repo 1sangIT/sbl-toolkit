@@ -259,7 +259,32 @@
                 if (sib.length > 0) { sib.sort((a, b) => a.y - b.y); const last = sib[sib.length - 1]; const max = getSubtreeMaxY(last.id); ny = (max !== null ? max : (last.y + last.height)) + 20; }
                 setNodes([...nodes, { id: nid, text: '', x: p.x + (p.width + 50) * dir, y: ny, width: 120, height: 40, parentId: selectedId, color: '#64748b' }]); setSelectedId(nid); setTimeout(() => setEditingId(nid), 100);
             };
+            const addSibling = (nodeId, currentText) => {
+                const node = nodes.find(n => n.id === nodeId);
+                // 중심 토픽은 같은 레벨의 노드를 만들 수 없으므로 기존 자식 추가 흐름을 사용한다.
+                if (!node || !node.parentId) { handleEditBlur(nodeId, currentText); return; }
+                const root = nodes.find(n => !n.parentId);
+                const nid = generateId();
+                const dir = node.x < root.x ? -1 : 1;
+                const siblings = nodes
+                    .filter(n => n.parentId === node.parentId && (n.x < root.x ? -1 : 1) === dir)
+                    .sort((a, b) => a.y - b.y);
+                const last = siblings[siblings.length - 1];
+                const maxY = getSubtreeMaxY(last.id);
+                const newNode = {
+                    id: nid, text: '', x: node.x, y: (maxY !== null ? maxY : last.y + last.height) + 20,
+                    width: 120, height: 40, parentId: node.parentId, color: '#64748b'
+                };
+                setNodes(nodes.map(n => n.id === nodeId ? { ...n, text: currentText.trim() || '새로운 토픽' } : n).concat(newNode));
+                setEditingId(null); setSelectedId(nid); setTimeout(() => setEditingId(nid), 100);
+            };
             const deleteNode = () => { if (!selectedId || selectedId === 'root') return; const dels = new Set([selectedId]); let c = true; while(c) { c = false; nodes.forEach(n => { if (n.parentId && dels.has(n.parentId) && !dels.has(n.id)) { dels.add(n.id); c = true; } }); } setNodes(nodes.filter(n => !dels.has(n.id))); setSelectedId(null); };
+            const clearMap = () => {
+                if (!window.confirm('마인드맵의 모든 가지를 지우고 새로 시작할까요?')) return;
+                setNodes([{ id: 'root', text: '중심 토픽', x: 0, y: 0, width: 160, height: 60, parentId: null, color: '#3b82f6' }]);
+                setSelectedId(null); setEditingId(null); setClipboard(null);
+                setScale(1); setOffset({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+            };
             const updateNodeText = (id, text) => setNodes(nodes.map(n => n.id === id ? { ...n, text } : n));
             const handleEditBlur = (id, text) => { setEditingId(null); if (!text || text.trim() === '') updateNodeText(id, '새로운 토픽'); };
             const exportMap = () => { const d = JSON.stringify(nodes, null, 2); const b = new Blob([d], { type: 'application/json' }); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'mindmap.json'; a.click(); URL.revokeObjectURL(u); };
@@ -293,6 +318,7 @@
                         <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
                             <button onClick={addNode} disabled={!selectedId} className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${selectedId ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><Plus size={18} /><span className="hidden sm:inline">자식 노드</span></button>
                             <button onClick={deleteNode} disabled={!selectedId || selectedId === 'root'} className="p-2 text-red-500 rounded-md disabled:text-slate-300"><Trash2 size={20} /></button>
+                            <button onClick={clearMap} className="flex items-center space-x-1 px-2 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium whitespace-nowrap" title="전체 삭제"><Trash2 size={17} /><span className="hidden md:inline">전체 삭제</span></button>
                             <div className="w-px h-6 bg-slate-300 mx-1"></div>
                             <button onClick={cutNode} disabled={!selectedId || selectedId === 'root'} className="p-2 text-slate-700 hover:bg-white rounded-md disabled:text-slate-300"><Scissors size={20} /></button>
                             <button onClick={copyNode} disabled={!selectedId} className="p-2 text-slate-700 hover:bg-white rounded-md disabled:text-slate-300"><Copy size={20} /></button>
@@ -322,7 +348,7 @@
                                 <div key={node.id} id={`node-${node.id}`} className={`absolute group flex flex-col items-center justify-center transition-shadow duration-200 touch-none ${selectedId === node.id ? 'ring-2 ring-indigo-500 ring-offset-2 z-10 shadow-lg' : 'shadow-md'}`} style={{ left: node.x, top: node.y, width: node.width, minHeight: '40px', height: 'auto', backgroundColor: node.parentId ? '#ffffff' : '#f0f9ff', borderColor: node.color, borderWidth: node.parentId === null ? 3 : 0, borderLeftWidth: 4, borderRadius: '8px' }} onMouseDown={(e) => onMouseDown(e, node.id)} onTouchStart={(e) => { e.stopPropagation(); onTouchStart(e, node.id); }} onDoubleClick={() => setEditingId(node.id)}>
                                     <div className="w-full h-full px-3 py-2 flex items-center justify-center pointer-events-none">
                                         {editingId === node.id ? (
-                                            <textarea autoFocus placeholder="새로운 토픽" className="w-full text-center bg-transparent outline-none border-b border-indigo-300 pointer-events-auto placeholder:text-slate-300 resize-none overflow-hidden" value={node.text} ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; updateNodeText(node.id, e.target.value); }} onBlur={(e) => handleEditBlur(node.id, e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditBlur(node.id, e.target.value); } }} />
+                                            <textarea autoFocus placeholder="새로운 토픽" className="w-full text-center bg-transparent outline-none border-b border-indigo-300 pointer-events-auto placeholder:text-slate-300 resize-none overflow-hidden" value={node.text} ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; updateNodeText(node.id, e.target.value); }} onBlur={(e) => handleEditBlur(node.id, e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addSibling(node.id, e.target.value); } }} />
                                         ) : (
                                             <span className={`text-center w-full select-none break-words whitespace-pre-wrap ${node.parentId === null ? 'font-bold text-lg' : 'text-sm font-medium'}`}>{node.text}</span>
                                         )}
