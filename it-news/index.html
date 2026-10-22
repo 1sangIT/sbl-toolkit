@@ -85,6 +85,23 @@
 
         let state = { categories: [] };
         let currentUserId = null;
+        let feedCache = {};
+        const escapeHtml = (v = '') => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        function applyFeedCache() {
+            const byName = new Map(Object.values(feedCache).map(c => [c.name, c]));
+            state.categories.forEach(c => c.keywords.forEach(k => {
+                const cached = byName.get(k.name.trim());
+                if (!cached) return;
+                if (cached.fetchedAt && cached.fetchedAt >= (k.lastFetchedAt || 0)) {
+                    k.allNews = Array.isArray(cached.items) ? cached.items : [];
+                    k.news = k.allNews.slice(0, 3);
+                    k.lastFetchedAt = cached.fetchedAt;
+                    k.sourceLabel = resolveRssSource(k.name)?.label || 'Google 뉴스 키워드 검색';
+                }
+                k.error = cached.error || (Date.now() - cached.fetchedAt > 3600000 ? '수집이 지연되어 이전 뉴스를 표시합니다.' : null);
+            }));
+        }
 
         onAuthStateChanged(auth, (user) => {
             if (user && user.email.toLowerCase() === ALLOWED) {
@@ -109,6 +126,15 @@
                     state = { categories: [{ id: 'cat_default', name: "AI & Tech", keywords: [] }] };
                     saveCloudData();
                 }
+                applyFeedCache();
+                renderDashboard();
+            });
+            onValue(ref(db, `users/${currentUserId}/newsFeedCache`), snapshot => {
+                feedCache = snapshot.val() || {};
+                applyFeedCache();
+                renderDashboard();
+            }, () => {
+                state.categories.forEach(c => c.keywords.forEach(k => { k.error = '뉴스 캐시 접근 실패. 기존 기사를 유지합니다.'; }));
                 renderDashboard();
             });
         }
@@ -183,16 +209,8 @@
         }
 
         async function fetchRssItems(rssUrl) {
-            const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
-            const data = await res.json();
-            if (data.status !== 'ok') return [];
-            return data.items.map(i => ({
-                title: stripHtml(i.title),
-                url: i.link,
-                summary: (stripHtml(i.description || i.content || '').substring(0, 100) || 'RSS 기사입니다.') + '...',
-                timestamp: new Date(i.pubDate || i.pubdate || Date.now()).getTime(),
-                source: rssUrl
-            }));
+            // RSS is collected by the private Mac mini service, not a public proxy.
+            throw new Error('Use authenticated newsFeedCache');
         }
 
         window.renderDashboard = () => {
@@ -233,14 +251,15 @@
                 contentHtml = `<ul class="space-y-3">` + display.map((n, i) => `
                     <li class="${i > 0 ? 'pt-3 border-t border-gray-100' : ''} group relative">
                         <div class="flex justify-between items-start">
-                            <a href="${n.url}" target="_blank" class="block hover:bg-gray-50 p-1 rounded transition flex-grow">
-                                <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${n.title}</h4>
-                                <p class="text-xs text-gray-500 mt-1 line-clamp-2">${n.summary || ''}</p>
+                            <a href="${escapeHtml(n.url)}" target="_blank" rel="noopener noreferrer" class="block hover:bg-gray-50 p-1 rounded transition flex-grow">
+                                <h4 class="font-semibold text-sm text-indigo-700 line-clamp-2">${escapeHtml(n.title)}</h4>
+                                <p class="text-xs text-gray-500 mt-1 line-clamp-2">${escapeHtml(n.summary || '')}</p>
                                 <p class="text-xs text-gray-400 mt-1">${formatNewsDate(n.timestamp)}</p>
                             </a>
                             <button class="btn-save-tracker p-1 ml-1 text-gray-400" 
                                 title="트래커에 저장"
-                                onclick="saveToTracker('${n.title.replace(/'/g, "\\'")}', '${n.url}', '${new Date(n.timestamp).toISOString()}', '${k.name}')">
+                                data-title="${escapeHtml(n.title)}" data-url="${escapeHtml(n.url)}" data-date="${new Date(n.timestamp).toISOString()}" data-keyword="${escapeHtml(k.name)}"
+                                onclick="saveToTracker(this.dataset.title, this.dataset.url, this.dataset.date, this.dataset.keyword)">
                                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
                             </button>
                         </div>
@@ -256,11 +275,12 @@
                             <button onclick="deleteKeyword('${catId}', '${k.id}')" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
                         </div>
                         <div class="news-content">${contentHtml}</div>
+                        ${k.error ? `<p class="text-xs text-amber-700 mt-2">${escapeHtml(k.error)}</p>` : ''}
                         ${k.allNews && k.allNews.length > 3 ? `<div class="mt-2 text-center"><button onclick="toggleMore('${catId}', '${k.id}')" class="text-xs text-gray-500 underline">${k.showMore ? '최신만 보기' : '이전 날짜 확인 ('+k.allNews.length+'개)'}</button></div>` : ''}
                     </div>
                     <div class="mt-4 border-t border-gray-100 pt-3 flex justify-between items-center">
                         <button onclick="fetchNews('${catId}', '${k.id}')" class="bg-indigo-500 text-white text-sm px-3 py-1.5 rounded-lg font-medium flex items-center"><i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i> 새로고침</button>
-                        <p class="text-xs text-gray-400">업데이트: ${updateTime}</p>
+                        <p class="text-xs text-gray-400">수집: ${k.lastFetchedAt ? new Date(k.lastFetchedAt).toLocaleString('ko-KR') : '대기 중'}</p>
                     </div>
                 </div>`;
         }
@@ -268,35 +288,14 @@
         window.fetchNews = async (catId, keyId) => {
             const cat = state.categories.find(c => c.id === catId);
             const k = cat.keywords.find(k => k.id === keyId);
-            k.loading = true; renderDashboard();
             try {
-                const rssSource = resolveRssSource(k.name);
-                let items = [];
-
-                if (rssSource) {
-                    k.sourceLabel = rssSource.label;
-                    const results = await Promise.all(rssSource.urls.map(url => fetchRssItems(url)));
-                    items = results.flat();
-                } else {
-                    k.sourceLabel = 'Google 뉴스 키워드 검색';
-                    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(k.name)}&hl=ko&gl=KR&ceid=KR:ko&num=15`;
-                    items = await fetchRssItems(rssUrl);
-                }
-
-                const seen = new Set();
-                k.allNews = items
-                    .filter(i => i.title && i.url && !seen.has(i.url) && seen.add(i.url))
-                    .sort((a,b) => b.timestamp - a.timestamp);
-                k.news = k.allNews.slice(0, 3);
-                k.lastFetchedDate = getTodayKey();
-                k.lastFetchedAt = Date.now();
-                k.error = null;
-                saveCloudData();
+                await set(ref(db, `users/${currentUserId}/newsRefreshRequestedAt`), Date.now());
+                k.error = '새 수집을 요청했습니다. 약 1분 후 자동 반영됩니다.';
             } catch (e) {
                 console.error(e);
-                k.error = "로드 실패";
+                k.error = '수집 요청 실패. 이전 기사를 유지합니다.';
             }
-            k.loading = false; renderDashboard();
+            renderDashboard();
         };
 
         window.addCategory = () => {
@@ -318,7 +317,8 @@
         window.toggleMore = (catId, keyId) => { const k = state.categories.find(c => c.id === catId).keywords.find(k => k.id === keyId); k.showMore = !k.showMore; renderDashboard(); };
 
         document.getElementById('refresh-all-btn').onclick = () => {
-            state.categories.forEach(c => c.keywords.forEach(k => fetchNews(c.id, k.id)));
+            const first = state.categories.find(c => c.keywords.length);
+            if (first) fetchNews(first.id, first.keywords[0].id);
         };
 
         window.exportData = () => {
