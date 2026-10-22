@@ -237,7 +237,7 @@
                         </div>
                     </div>`;
                 container.appendChild(section);
-                category.keywords.forEach(k => { if ((!k.news || k.lastFetchedDate !== getTodayKey()) && !k.loading) fetchNews(category.id, k.id); });
+                // Rendering is read-only. The collector discovers new keywords each minute.
             });
             lucide.createIcons();
         };
