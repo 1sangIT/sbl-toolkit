@@ -86,6 +86,10 @@
         let state = { categories: [] };
         let currentUserId = null;
         let feedCache = {};
+        const NEWS_PAGE_SIZE = 10;
+        const visibleNewsCounts = new Map();
+        const categoryViewKey = () => `sbl-it-news-collapsed:${currentUserId}`;
+        let collapsedCategories = {};
         const escapeHtml = (v = '') => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
         function applyFeedCache() {
@@ -95,7 +99,7 @@
                 if (!cached) return;
                 if (cached.fetchedAt && cached.fetchedAt >= (k.lastFetchedAt || 0)) {
                     k.allNews = Array.isArray(cached.items) ? cached.items : [];
-                    k.news = k.allNews.slice(0, 3);
+                    k.news = k.allNews.slice(0, NEWS_PAGE_SIZE);
                     k.lastFetchedAt = cached.fetchedAt;
                     k.sourceLabel = resolveRssSource(k.name)?.label || 'Google 뉴스 키워드 검색';
                 }
@@ -106,6 +110,8 @@
         onAuthStateChanged(auth, (user) => {
             if (user && user.email.toLowerCase() === ALLOWED) {
                 currentUserId = user.uid;
+                try { collapsedCategories = JSON.parse(localStorage.getItem(categoryViewKey()) || '{}'); }
+                catch { collapsedCategories = {}; }
                 document.getElementById('main-content').style.display = 'block';
                 loadCloudData();
             } else {
@@ -221,13 +227,13 @@
                 section.className = 'bg-white rounded-lg shadow overflow-hidden';
                 section.innerHTML = `
                     <div class="flex justify-between items-center p-4 border-b border-gray-200">
-                        <div class="flex items-center cursor-pointer flex-grow">
-                            <i data-lucide="chevron-down" class="w-5 h-5 mr-2"></i>
-                            <h2 class="text-xl font-bold text-gray-900">${category.name}</h2>
-                        </div>
+                        <button type="button" onclick="toggleCategory('${category.id}')" aria-expanded="${!collapsedCategories[category.id]}" aria-controls="body-${category.id}" class="flex items-center text-left flex-grow rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">
+                            <i data-lucide="${collapsedCategories[category.id] ? 'chevron-right' : 'chevron-down'}" class="w-5 h-5 mr-2"></i>
+                            <h2 class="text-xl font-bold text-gray-900">${escapeHtml(category.name)}</h2>
+                        </button>
                         <button onclick="deleteCategory('${category.id}')" class="text-gray-400 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
-                    <div class="p-4">
+                    <div id="body-${category.id}" class="p-4" ${collapsedCategories[category.id] ? 'hidden' : ''}>
                         <div class="flex space-x-3 mb-4">
                             <input type="text" id="input-${category.id}" onkeydown="if(event.key==='Enter') addKeyword('${category.id}')" placeholder="키워드 또는 신문사/RSS URL 입력 후 엔터" class="flex-grow border border-gray-300 rounded-lg px-4 py-2">
                             <button onclick="addKeyword('${category.id}')" class="bg-indigo-500 text-white p-2 rounded-lg"><i data-lucide="plus" class="w-5 h-5"></i></button>
@@ -245,9 +251,11 @@
         function createKeywordCard(catId, k) {
             let contentHtml = '';
             let updateTime = '없음';
+            const items = k.allNews?.length ? k.allNews : (k.news || []);
+            const visibleCount = visibleNewsCounts.get(`${catId}:${k.id}`) || NEWS_PAGE_SIZE;
             if (k.loading) contentHtml = '<div class="flex justify-center items-center min-h-[150px]"><div class="loader"></div></div>';
-            else if (k.news && k.news.length > 0) {
-                const display = k.showMore ? k.allNews : k.news;
+            else if (items.length > 0) {
+                const display = items.slice(0, visibleCount);
                 contentHtml = `<ul class="space-y-3">` + display.map((n, i) => `
                     <li class="${i > 0 ? 'pt-3 border-t border-gray-100' : ''} group relative">
                         <div class="flex justify-between items-start">
@@ -264,7 +272,7 @@
                             </button>
                         </div>
                     </li>`).join('') + `</ul>`;
-                updateTime = new Date(k.news[0].timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                updateTime = new Date(items[0].timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
             } else contentHtml = '<div class="text-gray-500 min-h-[150px] text-center p-4">뉴스가 없습니다.</div>';
 
             return `
@@ -276,7 +284,7 @@
                         </div>
                         <div class="news-content">${contentHtml}</div>
                         ${k.error ? `<p class="text-xs text-amber-700 mt-2">${escapeHtml(k.error)}</p>` : ''}
-                        ${k.allNews && k.allNews.length > 3 ? `<div class="mt-2 text-center"><button onclick="toggleMore('${catId}', '${k.id}')" class="text-xs text-gray-500 underline">${k.showMore ? '최신만 보기' : '이전 날짜 확인 ('+k.allNews.length+'개)'}</button></div>` : ''}
+                        ${items.length > NEWS_PAGE_SIZE ? `<div class="mt-3 text-center space-x-3"><span class="text-xs text-gray-400">${Math.min(visibleCount, items.length)} / ${items.length}개</span>${visibleCount < items.length ? `<button type="button" onclick="showMoreNews('${catId}', '${k.id}')" class="text-sm text-indigo-600 underline">더보기 (+${Math.min(NEWS_PAGE_SIZE, items.length - visibleCount)}개)</button>` : ''}${visibleCount > NEWS_PAGE_SIZE ? `<button type="button" onclick="resetNewsCount('${catId}', '${k.id}')" class="text-xs text-gray-500 underline">10개만 보기</button>` : ''}</div>` : ''}
                     </div>
                     <div class="mt-4 border-t border-gray-100 pt-3 flex justify-between items-center">
                         <button onclick="fetchNews('${catId}', '${k.id}')" class="bg-indigo-500 text-white text-sm px-3 py-1.5 rounded-lg font-medium flex items-center"><i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i> 새로고침</button>
@@ -314,7 +322,13 @@
 
         window.deleteKeyword = (catId, keyId) => { state.categories.find(c => c.id === catId).keywords = state.categories.find(c => c.id === catId).keywords.filter(k => k.id !== keyId); saveCloudData(); };
         window.deleteCategory = (id) => { if(confirm("삭제할까요?")) { state.categories = state.categories.filter(c => c.id !== id); saveCloudData(); } };
-        window.toggleMore = (catId, keyId) => { const k = state.categories.find(c => c.id === catId).keywords.find(k => k.id === keyId); k.showMore = !k.showMore; renderDashboard(); };
+        window.showMoreNews = (catId, keyId) => { const key = `${catId}:${keyId}`; visibleNewsCounts.set(key, (visibleNewsCounts.get(key) || NEWS_PAGE_SIZE) + NEWS_PAGE_SIZE); renderDashboard(); };
+        window.resetNewsCount = (catId, keyId) => { visibleNewsCounts.delete(`${catId}:${keyId}`); renderDashboard(); };
+        window.toggleCategory = (catId) => {
+            collapsedCategories[catId] = !collapsedCategories[catId];
+            try { localStorage.setItem(categoryViewKey(), JSON.stringify(collapsedCategories)); } catch { /* Storage may be disabled. */ }
+            renderDashboard();
+        };
 
         document.getElementById('refresh-all-btn').onclick = () => {
             const first = state.categories.find(c => c.keywords.length);
