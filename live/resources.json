@@ -1,4 +1,4 @@
 ---
 layout: null
 ---
-{"files":[{% assign started = false %}{% for file in site.static_files %}{% assign folder = file.path | remove_first: '/live/resources/' %}{% if file.path contains '/live/resources/' %}{% unless folder contains '/' %}{% if started %},{% endif %}{"path":{{ file.path | jsonify }}}{% assign started = true %}{% endunless %}{% endif %}{% endfor %}]}
+{"files":[{% assign started = false %}{% for file in site.static_files %}{% assign folder = file.path | remove_first: '/live/resources/' %}{% if file.path contains '/live/resources/' %}{% unless folder contains '/' %}{% unless file.name == 'README.md' %}{% if started %},{% endif %}{"path":{{ file.path | jsonify }}}{% assign started = true %}{% endunless %}{% endunless %}{% endif %}{% endfor %}]}
