@@ -395,6 +395,14 @@
   <!-- 자료 탭 -->
   <div id="tab-files" style="display:none;">
     <div id="fileUploadWrap" style="display:none;margin-bottom:20px;">
+      <div class="note-input-area" style="margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;">📁 파일 자료 관리 · GitHub</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a class="btn primary" href="https://github.com/1sangIT/sbl-toolkit/upload/main/live/resources" target="_blank" rel="noopener noreferrer">파일 업로드 ↗</a>
+          <a class="btn" href="https://github.com/1sangIT/sbl-toolkit/tree/main/live/resources" target="_blank" rel="noopener noreferrer">파일 관리·삭제 ↗</a>
+        </div>
+        <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-top:10px;">GitHub 로그인 → 파일 끌어놓기 → Commit changes(변경사항 저장). 삭제는 해당 파일을 열어 Delete file 후 저장하세요. 배포가 끝나면 아래 목록에 반영됩니다. 소용량 PDF·PPT 등 공개 배포용 자료만 올려주세요. 삭제해도 Git 이력에는 남습니다.</p>
+      </div>
       <div class="note-input-area" style="display:flex;flex-direction:column;gap:10px;">
         <div style="font-size:14px;font-weight:700;color:var(--text);">📎 자료 링크 추가</div>
         <input type="text" id="fileLinkName" placeholder="파일 이름 (예: 1강 강의자료.pdf)"
@@ -406,6 +414,12 @@
         </div>
       </div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="font-size:15px;">📥 다운로드 자료</h3>
+      <button class="btn sm" id="refreshRepoFilesBtn">목록 새로고침</button>
+    </div>
+    <div class="file-list-grid" id="repoFileList" style="margin-bottom:20px;" aria-live="polite">자료 목록을 불러오는 중입니다.</div>
+    <h3 style="font-size:15px;margin-bottom:12px;">🔗 링크 자료</h3>
     <div class="file-list-grid" id="fileList">
       <div class="file-empty">📂 업로드된 자료가 없습니다.</div>
     </div>
@@ -815,6 +829,28 @@
   }
 
   let latestFileSnap = null;
+  async function loadRepoFiles() {
+    const list = document.getElementById("repoFileList");
+    const btn = document.getElementById("refreshRepoFilesBtn");
+    btn.disabled = true;
+    try {
+      const response = await fetch("./resources.json?t=" + Date.now(), { cache: "no-store" });
+      if (!response.ok) throw new Error("목록 요청 실패");
+      const data = await response.json();
+      if (!Array.isArray(data.files)) throw new Error("목록 형식 오류");
+      const files = data.files.filter(f => typeof f.path === "string" && /^\/live\/resources\/[^/]+$/.test(f.path) && !/[<>\x00-\x1f]/.test(f.path));
+      files.sort((a,b) => a.path.localeCompare(b.path, "ko"));
+      list.innerHTML = files.length ? files.map(f => {
+        const name = f.path.split("/").pop();
+        const href = "/sbl-toolkit" + f.path.split("/").map(encodeURIComponent).join("/");
+        return `<div class="file-item"><div class="f-icon">${fileIcon(name)}</div><div class="f-info"><div class="f-name">${esc(name)}</div><div class="f-meta">공개 강의자료 · 파일 다운로드</div></div><div class="f-actions"><a class="btn primary sm" href="${href}" download="${esc(name).replace(/"/g, '&quot;')}">↓ 다운로드</a></div></div>`;
+      }).join("") : '<div class="file-empty">📂 아직 등록된 파일이 없습니다.</div>';
+    } catch (e) {
+      list.textContent = "파일 목록을 불러오지 못했습니다. 잠시 후 목록 새로고침을 눌러주세요. 기존 링크 자료는 아래에서 이용할 수 있습니다.";
+    } finally { btn.disabled = false; }
+  }
+  document.getElementById("refreshRepoFilesBtn").addEventListener("click", loadRepoFiles);
+  loadRepoFiles();
   const filesRef = collection(db, "live_files", LECTURE_ID, "items");
   const filesQuery = query(filesRef, orderBy("createdAt", "desc"));
 
