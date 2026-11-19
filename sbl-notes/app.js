@@ -14,7 +14,7 @@ const FILE_TYPE_META = {
 };
 
 const state = {
-  gasUrl: localStorage.getItem(KEYS.URL) || '',
+  gasUrl: localStorage.getItem(KEYS.URL) || 'https://script.google.com/macros/s/AKfycbyY5Jc6nLAJWNIxOOagP9do2jsJY-KsvRJ5-vjwWL-wE4-TnrUw_mv_-VYXrk6sHtiX/exec',
   apiSecret: localStorage.getItem(KEYS.SECRET) || '',
   root: null,
   allDocs: [],
