@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>SBL Notes</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon192.png" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <button id="btnMobileBack" class="icon-btn mobile-only hidden">‹ 노트북</button>
+        <span id="brandDot" class="brand-dot"></span>
+        <h1 id="headerTitle" class="brand-title">SBL Notes</h1>
+      </div>
+      <div class="header-actions">
+        <a href="https://keep.google.com/" target="_blank" rel="noopener" class="icon-btn">Keep</a>
+        <button id="btnRefresh" class="icon-btn" title="새로고침">↻</button>
+        <button id="btnSettings" class="icon-btn" title="설정">⚙</button>
+      </div>
+    </header>
+
+    <section id="setupView" class="setup-view hidden">
+      <div class="setup-card">
+        <h2>SBL Notes 모바일 연결</h2>
+        <p>PC에서 사용 중인 Google Apps Script 웹 앱 URL과 비밀번호(API_SECRET)를 입력하면 모든 폴더와 문서를 폰/태블릿에서 바로 열고 Google Docs 앱으로 편집할 수 있습니다.</p>
+        <button id="btnOpenSettingsFromSetup" class="btn-primary btn-full">설정 열기</button>
+      </div>
+    </section>
+
+    <main id="mainView" class="main-view">
+      <div class="action-bar">
+        <div class="action-row">
+          <input type="text" id="searchInput" class="search-input" placeholder="제목 필터 · Enter 본문검색" autocomplete="off" />
+          <button id="btnNewDoc" class="btn-primary">+ 새 문서</button>
+        </div>
+      </div>
+
+      <div id="loadingBar" class="loading-bar hidden">동기화 중...</div>
+
+      <div id="workspace" class="workspace show-tree">
+        <section id="paneTree" class="pane pane-tree">
+          <div class="pane-header">
+            <span class="pane-title">노트북</span>
+            <button id="btnNewRootFolder" class="text-btn">+ 폴더</button>
+          </div>
+          <div id="treeContainer" class="tree-container"></div>
+        </section>
+
+        <section id="paneDocs" class="pane pane-docs">
+          <div class="pane-header">
+            <div class="pane-header-left">
+              <span id="docListTitle" class="pane-title">모든 노트</span>
+              <span id="docListCount" class="count-pill">0</span>
+            </div>
+            <button id="btnCollapseDocs" class="collapse-btn tablet-only" title="목록 접기">›</button>
+          </div>
+          <div id="typeFilterBar" class="type-filter-bar">
+            <button class="filter-chip active" data-filter="all">전체</button>
+            <button class="filter-chip" data-filter="doc">문서</button>
+            <button class="filter-chip" data-filter="sheet">시트</button>
+            <button class="filter-chip" data-filter="slide">슬라이드</button>
+            <button class="filter-chip" data-filter="pdf">PDF</button>
+          </div>
+          <div id="docListContainer" class="doc-list-container"></div>
+          <button id="railDocs" class="collapsed-rail hidden" title="목록 펼치기">
+            <span>‹</span>
+            <span class="rail-label">목록</span>
+          </button>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>연결 설정</h2>
+        <button id="btnCloseSettings" class="icon-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">
+          <span class="field-label">GAS 웹 앱 URL</span>
+          <input type="url" id="inputGasUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+        </label>
+        <label class="field">
+          <span class="field-label">API_SECRET (비밀번호)</span>
+          <input type="password" id="inputApiSecret" placeholder="Code.gs 비밀번호" />
+        </label>
+        <div id="testResult" class="test-result hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnTestConn" class="btn-secondary">연결 테스트</button>
+        <button id="btnSaveSettings" class="btn-primary">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
